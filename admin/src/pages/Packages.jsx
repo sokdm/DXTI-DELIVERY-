@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, 
+import {
+  Search,
   Eye,
-  Trash2, 
+  Trash2,
   Truck,
   CheckCircle,
   AlertCircle,
   Clock,
-  X
+  X,
+  Printer,
+  Download,
+  MapPin,
+  Navigation
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -22,8 +26,10 @@ const Packages = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [stopReason, setStopReason] = useState('');
+  const [locationForm, setLocationForm] = useState({ lat: '', lng: '', locationName: '' });
 
   useEffect(() => {
     fetchPackages();
@@ -45,7 +51,7 @@ const Packages = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this package?')) return;
-    
+
     try {
       await axios.delete(`${API_URL}/packages/${id}`);
       toast.success('Package deleted successfully');
@@ -61,7 +67,7 @@ const Packages = () => {
       if (newStatus === 'stopped') {
         data.stopReason = stopReason;
       }
-      
+
       await axios.patch(`${API_URL}/packages/${selectedPackage._id}/status`, data);
       toast.success('Status updated successfully');
       setShowStatusModal(false);
@@ -74,7 +80,58 @@ const Packages = () => {
     }
   };
 
-  const filteredPackages = packages.filter(pkg => 
+  const handleUpdateLocation = async () => {
+    try {
+      await axios.patch(`${API_URL}/packages/${selectedPackage._id}/location`, {
+        lat: parseFloat(locationForm.lat),
+        lng: parseFloat(locationForm.lng),
+        locationName: locationForm.locationName,
+      });
+      toast.success('Location updated successfully');
+      setShowLocationModal(false);
+      setSelectedPackage(null);
+      setLocationForm({ lat: '', lng: '', locationName: '' });
+      fetchPackages();
+    } catch (error) {
+      toast.error('Failed to update location');
+    }
+  };
+
+  const handlePrintReceipt = (packageId) => {
+    window.open(`${API_URL}/packages/${packageId}/receipt`, '_blank', 'width=900,height=1000');
+  };
+
+  const handleDownloadPDF = async (packageId, trackingCode) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/packages/${packageId}/receipt/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `DXTI-Receipt-${trackingCode}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error('Failed to download PDF');
+    }
+  };
+
+  const openLocationModal = (pkg) => {
+    setSelectedPackage(pkg);
+    setLocationForm({
+      lat: pkg.currentLocation?.lat || '',
+      lng: pkg.currentLocation?.lng || '',
+      locationName: pkg.currentLocation?.locationName || '',
+    });
+    setShowLocationModal(true);
+  };
+
+  const filteredPackages = packages.filter(pkg =>
     pkg.trackingCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pkg.packageName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     pkg.senderName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -221,13 +278,34 @@ const Packages = () => {
                       <span className="font-semibold text-slate-900 dark:text-white">${pkg.deliveryPrice.toFixed(2)}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => window.open(`http://localhost:5173/track/${pkg.trackingCode}`, '_blank')}
                           className="p-2 text-slate-400 hover:text-admin-primary transition-colors"
                           title="View"
                         >
                           <Eye className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handlePrintReceipt(pkg._id)}
+                          className="p-2 text-slate-400 hover:text-[#D40511] transition-colors"
+                          title="Print Receipt"
+                        >
+                          <Printer className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadPDF(pkg._id, pkg.trackingCode)}
+                          className="p-2 text-slate-400 hover:text-[#1f2937] transition-colors"
+                          title="Download PDF"
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => openLocationModal(pkg)}
+                          className="p-2 text-slate-400 hover:text-green-600 transition-colors"
+                          title="Edit Location"
+                        >
+                          <Navigation className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(pkg._id)}
@@ -246,6 +324,7 @@ const Packages = () => {
         </div>
       </div>
 
+      {/* Status Update Modal */}
       <AnimatePresence>
         {showStatusModal && selectedPackage && (
           <motion.div
@@ -293,7 +372,6 @@ const Packages = () => {
                     <option value="stopped">Stopped</option>
                   </select>
                 </div>
-
                 {newStatus === 'stopped' && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -306,8 +384,6 @@ const Packages = () => {
                       rows="3"
                       placeholder="Enter reason for stopping delivery..."
                       required
-                    />
-                  required
                     />
                   </div>
                 )}
@@ -325,6 +401,101 @@ const Packages = () => {
                     className="flex-1 admin-btn disabled:opacity-50"
                   >
                     Update Status
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Location Update Modal */}
+      <AnimatePresence>
+        {showLocationModal && selectedPackage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-green-500" />
+                  Update Location
+                </h3>
+                <button
+                  onClick={() => setShowLocationModal(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                  Package: <span className="font-mono text-admin-primary">{selectedPackage.trackingCode}</span>
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Latitude *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={locationForm.lat}
+                    onChange={(e) => setLocationForm({...locationForm, lat: e.target.value})}
+                    className="admin-input"
+                    placeholder="e.g., 40.7128"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Longitude *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={locationForm.lng}
+                    onChange={(e) => setLocationForm({...locationForm, lng: e.target.value})}
+                    className="admin-input"
+                    placeholder="e.g., -74.0060"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Location Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={locationForm.locationName}
+                    onChange={(e) => setLocationForm({...locationForm, locationName: e.target.value})}
+                    className="admin-input"
+                    placeholder="e.g., New York Distribution Center"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    onClick={() => setShowLocationModal(false)}
+                    className="flex-1 admin-btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpdateLocation}
+                    disabled={!locationForm.lat || !locationForm.lng}
+                    className="flex-1 admin-btn disabled:opacity-50"
+                  >
+                    Update Location
                   </button>
                 </div>
               </div>

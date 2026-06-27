@@ -1,20 +1,45 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Package, 
-  User, 
-  MapPin, 
-  DollarSign, 
+import {
+  Package,
+  User,
+  MapPin,
+  DollarSign,
   Upload,
   Loader2,
-  CheckCircle
+  CheckCircle,
+  Globe,
+  Search
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ReceiptModal from '../components/ReceiptModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Geocode city/country using OpenStreetMap Nominatim
+const geocodeCity = async (city, country) => {
+  try {
+    const query = encodeURIComponent(`${city}, ${country}`);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`,
+      { headers: { 'User-Agent': 'DXTI-Delivery-App/1.0' } }
+    );
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+        locationName: data[0].display_name.split(',').slice(0, 3).join(', '),
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error('Geocoding error:', err);
+    return null;
+  }
+};
 
 const CreatePackage = () => {
   const navigate = useNavigate();
@@ -23,7 +48,8 @@ const CreatePackage = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [createdPackage, setCreatedPackage] = useState(null);
-  
+  const [geocoding, setGeocoding] = useState(false);
+
   const [formData, setFormData] = useState({
     packageName: '',
     packageDescription: '',
@@ -42,10 +68,10 @@ const CreatePackage = () => {
     receiverCity: '',
     receiverGender: 'male',
     deliveryPrice: '',
-    currentLocation: { lat: '', lng: '', locationName: '' },
-    destinationLocation: { lat: '', lng: '', locationName: '' },
+    currentLocation: { city: '', country: '' },
+    destinationLocation: { city: '', country: '' },
   });
-  
+
   const [imageFile, setImageFile] = useState(null);
 
   const handleChange = (e, section = null) => {
@@ -72,21 +98,55 @@ const CreatePackage = () => {
     }
   };
 
+  const buildSubmitData = async () => {
+    setGeocoding(true);
+    toast.loading('Finding coordinates...', { id: 'geo' });
+
+    const [currentCoords, destCoords] = await Promise.all([
+      geocodeCity(formData.currentLocation.city, formData.currentLocation.country),
+      geocodeCity(formData.destinationLocation.city, formData.destinationLocation.country),
+    ]);
+
+    toast.dismiss('geo');
+    setGeocoding(false);
+
+    if (!currentCoords) {
+      toast.error(`Could not find coordinates for ${formData.currentLocation.city}, ${formData.currentLocation.country}`);
+      return null;
+    }
+    if (!destCoords) {
+      toast.error(`Could not find coordinates for ${formData.destinationLocation.city}, ${formData.destinationLocation.country}`);
+      return null;
+    }
+
+    return {
+      ...formData,
+      currentLocation: currentCoords,
+      destinationLocation: destCoords,
+    };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const submitData = await buildSubmitData();
+      if (!submitData) {
+        setLoading(false);
+        return;
+      }
+
       const data = new FormData();
-      
-      Object.keys(formData).forEach(key => {
-        if (typeof formData[key] === 'object') {
-          data.append(key, JSON.stringify(formData[key]));
+
+      Object.keys(submitData).forEach(key => {
+        if (typeof submitData[key] === 'object') {
+          data.append(key, JSON.stringify(submitData[key]));
         } else {
-          data.append(key, formData[key]);
+          data.append(key, submitData[key]);
         }
       });
-      
+
       if (imageFile) {
         data.append('packageImage', imageFile);
       }
@@ -96,11 +156,12 @@ const CreatePackage = () => {
       });
 
       toast.success('Package created successfully!');
-      
-      // Store created package data and show receipt
-      setCreatedPackage(response.data.data.package);
+
+      // Fetch full package data for receipt
+      const fullPackageRes = await axios.get(`${API_URL}/packages/track/${response.data.data.trackingCode}`);
+      setCreatedPackage(fullPackageRes.data.data);
       setShowReceipt(true);
-      
+
       // Reset form
       setFormData({
         packageName: '',
@@ -120,13 +181,13 @@ const CreatePackage = () => {
         receiverCity: '',
         receiverGender: 'male',
         deliveryPrice: '',
-        currentLocation: { lat: '', lng: '', locationName: '' },
-        destinationLocation: { lat: '', lng: '', locationName: '' },
+        currentLocation: { city: '', country: '' },
+        destinationLocation: { city: '', country: '' },
       });
       setPreviewImage(null);
       setImageFile(null);
       setStep(1);
-      
+
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create package');
     } finally {
@@ -202,7 +263,7 @@ const CreatePackage = () => {
               <User className="w-5 h-5 text-admin-primary" />
               Sender Information
             </h3>
-            
+
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Full Name *</label>
@@ -244,7 +305,7 @@ const CreatePackage = () => {
               <User className="w-5 h-5 text-green-500" />
               Receiver Information
             </h3>
-            
+
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Full Name *</label>
@@ -296,7 +357,7 @@ const CreatePackage = () => {
               <MapPin className="w-5 h-5 text-red-500" />
               Delivery Information
             </h3>
-            
+
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Delivery Price ($) *
@@ -308,39 +369,44 @@ const CreatePackage = () => {
             </div>
 
             <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-              <h4 className="font-medium text-slate-900 dark:text-white mb-4">Current Location</h4>
-              <div className="grid md:grid-cols-3 gap-4">
+              <h4 className="font-medium text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-admin-primary" />
+                Current Location
+              </h4>
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Latitude *</label>
-                  <input type="number" step="any" name="lat" value={formData.currentLocation.lat} onChange={(e) => handleChange(e, 'currentLocation')} className="admin-input" required />
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">City *</label>
+                  <input type="text" name="city" value={formData.currentLocation.city} onChange={(e) => handleChange(e, 'currentLocation')} className="admin-input" placeholder="e.g., Lagos" required />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Longitude *</label>
-                  <input type="number" step="any" name="lng" value={formData.currentLocation.lng} onChange={(e) => handleChange(e, 'currentLocation')} className="admin-input" required />
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Location Name *</label>
-                  <input type="text" name="locationName" value={formData.currentLocation.locationName} onChange={(e) => handleChange(e, 'currentLocation')} className="admin-input" placeholder="e.g., New York, USA" required />
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Country *</label>
+                  <input type="text" name="country" value={formData.currentLocation.country} onChange={(e) => handleChange(e, 'currentLocation')} className="admin-input" placeholder="e.g., Nigeria" required />
                 </div>
               </div>
+              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                <Search className="w-3 h-3" />
+                We'll auto-detect exact coordinates from OpenStreetMap
+              </p>
             </div>
-
-            <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-              <h4 className="font-medium text-slate-900 dark:text-white mb-4">Destination Location</h4>
-              <div className="grid md:grid-cols-3 gap-4">
+       <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+              <h4 className="font-medium text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Globe className="w-4 h-4 text-green-500" />
+                Destination Location
+              </h4>
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Latitude *</label>
-                  <input type="number" step="any" name="lat" value={formData.destinationLocation.lat} onChange={(e) => handleChange(e, 'destinationLocation')} className="admin-input" required />
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">City *</label>
+                  <input type="text" name="city" value={formData.destinationLocation.city} onChange={(e) => handleChange(e, 'destinationLocation')} className="admin-input" placeholder="e.g., New York" required />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Longitude *</label>
-                  <input type="number" step="any" name="lng" value={formData.destinationLocation.lng} onChange={(e) => handleChange(e, 'destinationLocation')} className="admin-input" required />
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Location Name *</label>
-                  <input type="text" name="locationName" value={formData.destinationLocation.locationName} onChange={(e) => handleChange(e, 'destinationLocation')} className="admin-input" placeholder="e.g., Los Angeles, USA" required />
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-1">Country *</label>
+                  <input type="text" name="country" value={formData.destinationLocation.country} onChange={(e) => handleChange(e, 'destinationLocation')} className="admin-input" placeholder="e.g., USA" required />
                 </div>
               </div>
+              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                <Search className="w-3 h-3" />
+                We'll auto-detect exact coordinates from OpenStreetMap
+              </p>
             </div>
           </div>
         );
@@ -393,7 +459,7 @@ const CreatePackage = () => {
             >
               Previous
             </button>
-            
+
             {step < 4 ? (
               <button type="button" onClick={() => setStep(step + 1)} className="admin-btn">
                 Next
@@ -401,13 +467,13 @@ const CreatePackage = () => {
             ) : (
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || geocoding}
                 className="admin-btn flex items-center gap-2 disabled:opacity-50"
               >
-                {loading ? (
+                {loading || geocoding ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Creating...
+                    {geocoding ? 'Finding coordinates...' : 'Creating...'}
                   </>
                 ) : (
                   <>
@@ -421,11 +487,10 @@ const CreatePackage = () => {
         </form>
       </motion.div>
 
-      {/* Receipt Modal */}
-      <ReceiptModal 
-        isOpen={showReceipt} 
-        onClose={() => setShowReceipt(false)} 
-        packageData={createdPackage} 
+      <ReceiptModal
+        isOpen={showReceipt}
+        onClose={() => setShowReceipt(false)}
+        packageData={createdPackage}
       />
     </>
   );
