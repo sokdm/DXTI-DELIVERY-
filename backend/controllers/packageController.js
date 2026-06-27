@@ -1,11 +1,13 @@
 const Package = require('../models/Package');
 const { cloudinary } = require('../config/cloudinary');
+const { sendShipmentCreatedEmail, sendStatusUpdateEmail } = require('../utils/emailService');
+const { generateReceiptHTML, generateReceiptPDF } = require('../utils/receiptService');
 
 exports.createPackage = async (req, res) => {
   try {
     console.log('📦 Creating package...');
     console.log('File:', req.file ? 'YES' : 'NO');
-    
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -14,11 +16,50 @@ exports.createPackage = async (req, res) => {
     }
 
     const data = req.body;
-    
+
+    // Safely parse numbers
+    const packageWeight = parseFloat(data.packageWeight);
+    const deliveryPrice = parseFloat(data.deliveryPrice);
+
+    if (isNaN(packageWeight) || packageWeight <= 0) {
+      // Clean up uploaded file if validation fails
+      if (req.file.filename) {
+        try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid package weight',
+      });
+    }
+
+    if (isNaN(deliveryPrice) || deliveryPrice < 0) {
+      if (req.file.filename) {
+        try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid delivery price',
+      });
+    }
+
+    let currentLocation, destinationLocation;
+    try {
+      currentLocation = JSON.parse(data.currentLocation);
+      destinationLocation = JSON.parse(data.destinationLocation);
+    } catch (e) {
+      if (req.file.filename) {
+        try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid location data format',
+      });
+    }
+
     const package = await Package.create({
       packageName: data.packageName,
       packageDescription: data.packageDescription,
-      packageWeight: parseFloat(data.packageWeight),
+      packageWeight: packageWeight,
       packageImage: req.file.path,
       packageImagePublicId: req.file.filename,
       senderName: data.senderName,
@@ -34,11 +75,19 @@ exports.createPackage = async (req, res) => {
       receiverCountry: data.receiverCountry,
       receiverCity: data.receiverCity,
       receiverGender: data.receiverGender,
-      deliveryPrice: parseFloat(data.deliveryPrice),
-      currentLocation: JSON.parse(data.currentLocation),
-      destinationLocation: JSON.parse(data.destinationLocation),
+      deliveryPrice: deliveryPrice,
+      currentLocation: currentLocation,
+      destinationLocation: destinationLocation,
       status: 'pending',
     });
+
+    // Send email to receiver (don't block on failure)
+    try {
+      await sendShipmentCreatedEmail(package);
+      console.log('✅ Shipment creation email sent to', package.receiverEmail);
+    } catch (emailErr) {
+      console.error('❌ Failed to send email:', emailErr.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -50,15 +99,17 @@ exports.createPackage = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error creating package:', error);
-    
+
+    // Clean up Cloudinary image on error
     if (req.file && req.file.filename) {
       try {
         await cloudinary.uploader.destroy(req.file.filename);
+        console.log('Cleaned up Cloudinary image after error');
       } catch (e) {
         console.error('Failed to delete image:', e);
       }
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Error creating package: ' + error.message,
@@ -132,7 +183,7 @@ exports.updateStatus = async (req, res) => {
     const { status, stopReason } = req.body;
 
     const validStatuses = ['pending', 'in_transit', 'arrived', 'delivered', 'stopped'];
-    
+
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -147,8 +198,18 @@ exports.updateStatus = async (req, res) => {
       });
     }
 
+    const existingPackage = await Package.findById(id);
+    if (!existingPackage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Package not found',
+      });
+    }
+
+    const oldStatus = existingPackage.status;
+
     const updateData = { status, updatedAt: Date.now() };
-    
+
     if (status === 'stopped') {
       updateData.stopReason = stopReason;
     } else if (status === 'in_transit') {
@@ -164,11 +225,14 @@ exports.updateStatus = async (req, res) => {
       { new: true }
     );
 
-    if (!package) {
-      return res.status(404).json({
-        success: false,
-        message: 'Package not found',
-      });
+    // Send status update email if status changed
+    if (oldStatus !== status) {
+      try {
+        await sendStatusUpdateEmail(package, oldStatus);
+        console.log('✅ Status update email sent to', package.receiverEmail);
+      } catch (emailErr) {
+        console.error('❌ Failed to send status email:', emailErr.message);
+      }
     }
 
     res.status(200).json({
@@ -246,6 +310,102 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching stats',
+      error: error.message,
+    });
+  }
+};
+
+// NEW: Get receipt HTML for printing
+exports.getReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const package = await Package.findById(id);
+
+    if (!package) {
+      return res.status(404).json({
+        success: false,
+        message: 'Package not found',
+      });
+    }
+
+    const html = generateReceiptHTML(package);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error generating receipt',
+      error: error.message,
+    });
+  }
+};
+
+// NEW: Download receipt PDF
+exports.downloadReceiptPDF = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const package = await Package.findById(id);
+
+    if (!package) {
+      return res.status(404).json({
+        success: false,
+        message: 'Package not found',
+      });
+    }
+
+    const pdfBuffer = await generateReceiptPDF(package);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="DXTI-Receipt-${package.trackingCode}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error generating PDF',
+      error: error.message,
+    });
+  }
+};
+
+// NEW: Update package location manually
+exports.updateLocation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lat, lng, locationName } = req.body;
+
+    if (lat === undefined || lng === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required',
+      });
+    }
+
+    const package = await Package.findByIdAndUpdate(
+      id,
+      {
+        'currentLocation.lat': parseFloat(lat),
+        'currentLocation.lng': parseFloat(lng),
+        'currentLocation.locationName': locationName || 'Manual Update',
+        updatedAt: Date.now(),
+      },
+      { new: true }
+    );
+
+    if (!package) {
+      return res.status(404).json({
+        success: false,
+        message: 'Package not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Package location updated successfully',
+      data: package,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error updating location',
       error: error.message,
     });
   }

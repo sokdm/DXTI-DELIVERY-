@@ -2,45 +2,42 @@ const multer = require('multer');
 const { storage } = require('../config/cloudinary');
 
 const upload = multer({
-  storage: storage,
+  storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 10 * 1024 * 1024, // 10MB max
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'), false);
+      cb(new Error('Only image files (JPG, PNG, WEBP, GIF) are allowed'), false);
     }
   },
 });
 
 const handleUploadError = (err, req, res, next) => {
-  console.error('❌ Upload Error:', err);
-  
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        message: 'File size too large. Maximum size is 5MB.',
+        message: 'File too large. Maximum size is 10MB.',
       });
     }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error: ' + err.message,
+    });
+  }
+  
+  if (err) {
     return res.status(400).json({
       success: false,
       message: err.message,
     });
   }
   
-  if (err.message && err.message.includes('Cloudinary')) {
-    return res.status(500).json({
-      success: false,
-      message: 'Image upload failed. Please check Cloudinary configuration.',
-      error: err.message,
-    });
-  }
-  
-  next(err);
+  next();
 };
 
 module.exports = { upload, handleUploadError };
