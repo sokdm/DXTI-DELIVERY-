@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, MapPin, Calendar, Clock, Truck, CheckCircle, 
@@ -44,16 +44,28 @@ const TrackingResult = ({ packageData }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
 
-  const status = packageData?.status || 'pending';
+  const status = packageData.status || 'pending';
   const config = statusConfig[status] || statusConfig.pending;
   const StatusIcon = config.icon;
 
-  const timeline = packageData?.timeline || [];
-  const currentLocation = packageData?.currentLocation;
-  const destination = packageData?.destination;
-  const origin = packageData?.originLocation || packageData?.origin;
+  const timeline = packageData.timeline || [];
+  const currentLocation = packageData.currentLocation;
+  const destination = packageData.destination;
 
-  const progress = packageData?.progress || config.progress;
+  const progress = packageData.progress || config.progress;
+
+  // Helper to safely get location name from either string or object
+  const getLocationName = (loc) => {
+    if (!loc) return null;
+    if (typeof loc === 'string') return loc;
+    if (loc.locationName) return loc.locationName;
+    if (loc.name) return loc.name;
+    if (loc.city) return `${loc.city}${loc.country ? ', ' + loc.country : ''}`;
+    return null;
+  };
+
+  const originName = getLocationName(packageData.origin) || 'Origin';
+  const destinationName = getLocationName(packageData.destination) || 'Destination';
 
   return (
     <motion.div
@@ -72,17 +84,17 @@ const TrackingResult = ({ packageData }) => {
                   <StatusIcon className="w-4 h-4 inline mr-2" />
                   {config.label}
                 </span>
-                {packageData?.stopReason && (
+                {packageData.stopReason && (
                   <span className="px-3 py-1 bg-dhl-red text-white text-xs font-bold uppercase">
                     STOPPED
                   </span>
                 )}
               </div>
               <h2 className="text-3xl font-black text-dhl-black dark:text-white uppercase">
-                {packageData?.trackingCode || 'N/A'}
+                {packageData.trackingCode}
               </h2>
               <p className="text-dhl-gray-500 dark:text-dhl-gray-400 mt-1">
-                {packageData?.description || 'Package in transit'}
+                {packageData.description || 'Package in transit'}
               </p>
             </div>
 
@@ -111,9 +123,7 @@ const TrackingResult = ({ packageData }) => {
               </div>
               <div>
                 <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">From</div>
-                <div className="font-bold text-dhl-black dark:text-white">
-                  {typeof packageData?.origin === 'string' ? packageData.origin : (packageData?.origin?.locationName || packageData?.originLocation?.locationName || 'Origin')}
-                </div>
+                <div className="font-bold text-dhl-black dark:text-white">{originName}</div>
               </div>
             </div>
 
@@ -131,9 +141,7 @@ const TrackingResult = ({ packageData }) => {
             <div className="flex items-center gap-3 text-right">
               <div>
                 <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">To</div>
-                <div className="font-bold text-dhl-black dark:text-white">
-                  {destination?.locationName || 'Destination'}
-                </div>
+                <div className="font-bold text-dhl-black dark:text-white">{destinationName}</div>
               </div>
               <div className="w-10 h-10 bg-dhl-red flex items-center justify-center">
                 <Navigation className="w-5 h-5 text-white" />
@@ -148,10 +156,10 @@ const TrackingResult = ({ packageData }) => {
         <MapTracker 
           currentLocation={currentLocation}
           destination={destination}
-          origin={origin}
+          origin={packageData.originLocation || packageData.origin}
           status={status}
           progress={progress / 100}
-          stopReason={packageData?.stopReason}
+          stopReason={packageData.stopReason}
         />
       )}
 
@@ -181,36 +189,34 @@ const TrackingResult = ({ packageData }) => {
                 <div className="relative">
                   <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-dhl-gray-200 dark:bg-dhl-gray-700"></div>
                   
-                  {timeline.length > 0 ? (
-                    timeline.map((event, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="relative flex items-start gap-4 mb-6 last:mb-0"
-                      >
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
-                          index === 0 ? 'bg-dhl-yellow text-dhl-black' : 'bg-dhl-gray-200 dark:bg-dhl-gray-700 text-dhl-gray-500'
-                        }`}>
-                          <CheckCircle className="w-4 h-4" />
+                  {timeline.length > 0 ? timeline.map((event, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="relative flex items-start gap-4 mb-6 last:mb-0"
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+                        index === 0 ? 'bg-dhl-yellow text-dhl-black' : 'bg-dhl-gray-200 dark:bg-dhl-gray-700 text-dhl-gray-500'
+                      }`}>
+                        <CheckCircle className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-dhl-black dark:text-white uppercase text-sm">
+                            {event.status?.replace('_', ' ')}
+                          </span>
+                          <span className="text-xs text-dhl-gray-500">
+                            {new Date(event.timestamp).toLocaleString()}
+                          </span>
                         </div>
-                        <div className="flex-1 bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-dhl-black dark:text-white uppercase text-sm">
-                              {event.status?.replace('_', ' ')}
-                            </span>
-                            <span className="text-xs text-dhl-gray-500">
-                              {new Date(event.timestamp).toLocaleString()}
-                            </span>
-                          </div>
-                          <p className="text-dhl-gray-600 dark:text-dhl-gray-300 text-sm">
-                            {event.location} - {event.description}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))
-                  ) : (
+                        <p className="text-dhl-gray-600 dark:text-dhl-gray-300 text-sm">
+                          {event.location} - {event.description}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )) : (
                     <div className="text-center py-8 text-dhl-gray-500">
                       No tracking history available yet.
                     </div>
@@ -251,16 +257,16 @@ const TrackingResult = ({ packageData }) => {
                       <User className="w-5 h-5 text-dhl-yellow" />
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Sender</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.sender?.name || 'N/A'}</div>
-                        <div className="text-sm text-dhl-gray-500">{packageData?.sender?.phone || ''}</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.sender?.name || 'N/A'}</div>
+                        <div className="text-sm text-dhl-gray-500">{packageData.sender?.phone || ''}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
                       <User className="w-5 h-5 text-dhl-red" />
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Recipient</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.recipient?.name || 'N/A'}</div>
-                        <div className="text-sm text-dhl-gray-500">{packageData?.recipient?.phone || ''}</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.recipient?.name || 'N/A'}</div>
+                        <div className="text-sm text-dhl-gray-500">{packageData.recipient?.phone || ''}</div>
                       </div>
                     </div>
                   </div>
@@ -270,20 +276,20 @@ const TrackingResult = ({ packageData }) => {
                       <Weight className="w-5 h-5 text-dhl-yellow" />
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Weight</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.weight || 'N/A'} kg</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.weight || 'N/A'} kg</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
                       <Ruler className="w-5 h-5 text-dhl-red" />
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Dimensions</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.dimensions || 'N/A'}</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.dimensions || 'N/A'}</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {packageData?.estimatedDelivery && (
+                {packageData.estimatedDelivery && (
                   <div className="mt-4 p-4 bg-dhl-yellow/20 border-l-4 border-dhl-yellow rounded-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-dhl-yellow" />
@@ -302,7 +308,7 @@ const TrackingResult = ({ packageData }) => {
                   </div>
                 )}
 
-                {packageData?.stopReason && (
+                {packageData.stopReason && (
                   <div className="mt-4 p-4 bg-dhl-red/20 border-l-4 border-dhl-red rounded-sm">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-5 h-5 text-dhl-red" />

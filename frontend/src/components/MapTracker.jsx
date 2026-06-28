@@ -2,12 +2,38 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Navigation, AlertTriangle, CheckCircle } from 'lucide-react';
 
+const getLocationName = (loc) => {
+  if (!loc) return null;
+  if (typeof loc === 'string') return loc;
+  if (loc.locationName) return loc.locationName;
+  if (loc.name) return loc.name;
+  if (loc.city) return `${loc.city}${loc.country ? ', ' + loc.country : ''}`;
+  return null;
+};
+
 const MapTracker = ({ currentLocation, destination, origin, status, progress, stopReason }) => {
   const isStopped = status === 'stopped';
   const isDelivered = status === 'delivered';
   const isInTransit = status === 'in_transit';
 
-  const hasValidCoords = (loc) => loc && typeof loc.lat === 'number' && typeof loc.lng === 'number' && !isNaN(loc.lat) && !isNaN(loc.lng);
+  const hasValidCoords = (loc) => {
+    if (!loc) return false;
+    const lat = typeof loc.lat === 'number' ? loc.lat : loc.latitude;
+    const lng = typeof loc.lng === 'number' ? loc.lng : loc.longitude;
+    return typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng);
+  };
+
+  const getCoords = (loc) => {
+    if (!loc) return null;
+    return {
+      lat: typeof loc.lat === 'number' ? loc.lat : loc.latitude,
+      lng: typeof loc.lng === 'number' ? loc.lng : loc.longitude,
+    };
+  };
+
+  const originCoords = getCoords(origin);
+  const destCoords = getCoords(destination);
+  const currentCoords = getCoords(currentLocation);
 
   if (!hasValidCoords(currentLocation) || !hasValidCoords(destination)) {
     return (
@@ -20,20 +46,24 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
   }
 
   const distance = useMemo(() => {
-    if (!hasValidCoords(currentLocation) || !hasValidCoords(destination)) return null;
+    if (!currentCoords || !destCoords) return null;
     const R = 6371;
-    const dLat = (destination.lat - currentLocation.lat) * Math.PI / 180;
-    const dLon = (destination.lng - currentLocation.lng) * Math.PI / 180;
+    const dLat = (destCoords.lat - currentCoords.lat) * Math.PI / 180;
+    const dLon = (destCoords.lng - currentCoords.lng) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(currentLocation.lat * Math.PI / 180) * Math.cos(destination.lat * Math.PI / 180) *
+              Math.cos(currentCoords.lat * Math.PI / 180) * Math.cos(destCoords.lat * Math.PI / 180) *
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return Math.round(R * c);
-  }, [currentLocation, destination]);
+  }, [currentCoords, destCoords]);
 
-  const centerLat = (currentLocation.lat + destination.lat) / 2;
-  const centerLng = (currentLocation.lng + destination.lng) / 2;
-  const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${centerLat},${centerLng}&zoom=4&size=800x400&markers=${currentLocation.lat},${currentLocation.lng},ol-marker-gold|${destination.lat},${destination.lng},ol-marker-red`;
+  const centerLat = (currentCoords.lat + destCoords.lat) / 2;
+  const centerLng = (currentCoords.lng + destCoords.lng) / 2;
+  const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${centerLat},${centerLng}&zoom=4&size=800x400&markers=${currentCoords.lat},${currentCoords.lng},ol-marker-gold|${destCoords.lat},${destCoords.lng},ol-marker-red`;
+
+  const originName = getLocationName(origin) || 'Origin';
+  const currentName = getLocationName(currentLocation) || 'Current';
+  const destName = getLocationName(destination) || 'Destination';
 
   return (
     <motion.div
@@ -48,26 +78,26 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
           Live Tracking Map
         </h3>
         <div className="flex items-center gap-4 text-sm flex-wrap">
-          {origin && origin.locationName && (
+          {origin && (
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-dhl-gray-600"></div>
-              <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">{origin.locationName}</span>
+              <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">{originName}</span>
             </div>
           )}
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${isStopped ? 'bg-dhl-red animate-pulse' : isDelivered ? 'bg-green-500' : 'bg-dhl-yellow animate-pulse'}`}></div>
-            <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">{currentLocation?.locationName || 'Current'}</span>
+            <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">{currentName}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-dhl-red"></div>
-            <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">{destination?.locationName || 'Destination'}</span>
+            <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">{destName}</span>
           </div>
         </div>
       </div>
 
       <div className="h-96 relative bg-dhl-gray-100 dark:bg-dhl-gray-800 overflow-hidden">
         <img src={staticMapUrl} alt="Route Map" className="w-full h-full object-cover" />
-        
+
         <div className="absolute top-4 right-4 z-10">
           <div className={`px-4 py-2 rounded-sm font-black text-sm shadow-lg border-2 uppercase tracking-wider ${
             status === 'stopped' ? 'bg-dhl-red text-white border-dhl-red-dark animate-pulse' :
