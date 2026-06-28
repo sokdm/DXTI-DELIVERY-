@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, MapPin, Calendar, Clock, Truck, CheckCircle, 
   AlertTriangle, ChevronDown, ChevronUp, 
-  Weight, Ruler, User, Mail, Box, Navigation, Send, DollarSign
+  Weight, DollarSign, User, Mail, Box, Navigation, Send
 } from 'lucide-react';
 import MapTracker from './MapTracker';
 
@@ -50,9 +50,18 @@ const getLocationName = (loc) => {
   return null;
 };
 
+// Format address cleanly - remove extra spaces and trailing commas
+const formatAddress = (address, city, country) => {
+  const parts = [];
+  if (address && address.trim()) parts.push(address.trim());
+  if (city && city.trim()) parts.push(city.trim());
+  if (country && country.trim()) parts.push(country.trim());
+  return parts.join(', ');
+};
+
 const TrackingResult = ({ packageData }) => {
-  const [showDetails, setShowDetails] = useState(false);
-  const [showHistory, setShowHistory] = useState(true);
+  const [showDetails, setShowDetails] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
 
   const status = packageData.status || 'pending';
   const config = statusConfig[status] || statusConfig.pending;
@@ -82,6 +91,7 @@ const TrackingResult = ({ packageData }) => {
   const price = packageData.deliveryPrice;
   const description = packageData.packageDescription;
   const packageName = packageData.packageName;
+  const packageImage = packageData.packageImage;
 
   const currentLocation = packageData.currentLocation;
   const destination = packageData.destinationLocation;
@@ -90,6 +100,9 @@ const TrackingResult = ({ packageData }) => {
 
   const originName = getLocationName(currentLocation) || 'Origin';
   const destName = getLocationName(destination) || 'Destination';
+
+  const senderAddress = formatAddress(sender.address, sender.city, sender.country);
+  const receiverAddress = formatAddress(receiver.address, receiver.city, receiver.country);
 
   // Build timeline from status history if available, else empty
   const timeline = packageData.statusHistory || packageData.timeline || [];
@@ -255,15 +268,15 @@ const TrackingResult = ({ packageData }) => {
         </AnimatePresence>
       </div>
 
-      {/* Package Details */}
-      <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden">
+      {/* Package Details - Dark Card Style */}
+      <div className="bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden">
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="w-full p-6 flex items-center justify-between hover:bg-dhl-gray-50 dark:hover:bg-dhl-gray-800 transition-colors"
+          className="w-full p-6 flex items-center justify-between hover:bg-dhl-gray-800 transition-colors"
         >
           <div className="flex items-center gap-3">
             <Package className="w-5 h-5 text-dhl-yellow" />
-            <h3 className="text-lg font-black text-dhl-black dark:text-white uppercase">Package Details</h3>
+            <h3 className="text-lg font-black text-white uppercase">Package Details</h3>
           </div>
           {showDetails ? <ChevronUp className="w-5 h-5 text-dhl-gray-400" /> : <ChevronDown className="w-5 h-5 text-dhl-gray-400" />}
         </button>
@@ -277,77 +290,92 @@ const TrackingResult = ({ packageData }) => {
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="px-6 pb-6">
-                {/* Package Name & Description */}
-                {packageName && (
-                  <div className="mb-4 p-4 bg-dhl-yellow/10 border-l-4 border-dhl-yellow rounded-sm">
-                    <div className="text-xs text-dhl-gray-600 uppercase tracking-wider font-bold">Package</div>
-                    <div className="font-black text-dhl-black dark:text-white text-lg">{packageName}</div>
-                    {description && <div className="text-sm text-dhl-gray-500">{description}</div>}
-                  </div>
-                )}
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    {/* Sender */}
-                    <div className="flex items-start gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                      <User className="w-5 h-5 text-dhl-yellow mt-1" />
-                      <div className="flex-1">
-                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Sender</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{sender.name || 'N/A'}</div>
-                        {sender.phone && <div className="text-sm text-dhl-gray-500">{sender.phone}</div>}
-                        {sender.email && <div className="text-sm text-dhl-gray-500">{sender.email}</div>}
-                        {(sender.address || sender.city) && (
-                          <div className="text-sm text-dhl-gray-500 mt-1">
-                            {sender.address}{sender.address && sender.city ? ', ' : ''}{sender.city}{sender.country ? ', ' + sender.country : ''}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {/* Receiver */}
-                    <div className="flex items-start gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                      <User className="w-5 h-5 text-dhl-red mt-1" />
-                      <div className="flex-1">
-                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Recipient</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{receiver.name || 'N/A'}</div>
-                        {receiver.phone && <div className="text-sm text-dhl-gray-500">{receiver.phone}</div>}
-                        {receiver.email && <div className="text-sm text-dhl-gray-500">{receiver.email}</div>}
-                        {(receiver.address || receiver.city) && (
-                          <div className="text-sm text-dhl-gray-500 mt-1">
-                            {receiver.address}{receiver.address && receiver.city ? ', ' : ''}{receiver.city}{receiver.country ? ', ' + receiver.country : ''}
-                          </div>
-                        )}
-                      </div>
+              <div className="px-6 pb-6 space-y-4">
+                
+                {/* Package Name + Image */}
+                <div className="p-4 bg-dhl-gray-800 rounded-sm border-l-4 border-dhl-yellow">
+                  <div className="flex items-center gap-4">
+                    {packageImage && (
+                      <img 
+                        src={packageImage} 
+                        alt={packageName || 'Package'} 
+                        className="w-16 h-16 object-cover rounded-sm"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Package</div>
+                      <div className="font-black text-white text-xl">{packageName || 'Parcel'}</div>
+                      {description && <div className="text-dhl-gray-400 text-sm">{description}</div>}
                     </div>
                   </div>
+                </div>
 
-                  <div className="space-y-4">
-                    {/* Weight */}
-                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                      <Weight className="w-5 h-5 text-dhl-yellow" />
+                {/* Sender */}
+                <div className="p-4 bg-dhl-gray-800 rounded-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-dhl-yellow/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-dhl-yellow" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-dhl-gray-500 uppercase tracking-wider mb-1">Sender</div>
+                      <div className="font-bold text-white text-lg">{sender.name || 'N/A'}</div>
+                      {sender.phone && <div className="text-dhl-gray-400 text-sm">{sender.phone}</div>}
+                      {sender.email && <div className="text-dhl-gray-400 text-sm">{sender.email}</div>}
+                      {senderAddress && <div className="text-dhl-gray-400 text-sm mt-1">{senderAddress}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recipient */}
+                <div className="p-4 bg-dhl-gray-800 rounded-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-dhl-red/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-dhl-red" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-dhl-gray-500 uppercase tracking-wider mb-1">Recipient</div>
+                      <div className="font-bold text-white text-lg">{receiver.name || 'N/A'}</div>
+                      {receiver.phone && <div className="text-dhl-gray-400 text-sm">{receiver.phone}</div>}
+                      {receiver.email && <div className="text-dhl-gray-400 text-sm">{receiver.email}</div>}
+                      {receiverAddress && <div className="text-dhl-gray-400 text-sm mt-1">{receiverAddress}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weight & Price Row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-dhl-gray-800 rounded-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-dhl-yellow/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Weight className="w-5 h-5 text-dhl-yellow" />
+                      </div>
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Weight</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{weight !== undefined ? weight + ' kg' : 'N/A'}</div>
+                        <div className="font-bold text-white text-lg">{weight !== undefined ? weight + ' kg' : 'N/A'}</div>
                       </div>
                     </div>
-                    {/* Price */}
-                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                      <DollarSign className="w-5 h-5 text-dhl-red" />
+                  </div>
+                  <div className="p-4 bg-dhl-gray-800 rounded-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-dhl-red/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <DollarSign className="w-5 h-5 text-dhl-red" />
+                      </div>
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Delivery Price</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{price !== undefined ? '$' + parseFloat(price).toFixed(2) : 'N/A'}</div>
+                        <div className="font-bold text-white text-lg">{price !== undefined ? '$' + parseFloat(price).toFixed(2) : 'N/A'}</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {packageData.estimatedDelivery && (
-                  <div className="mt-4 p-4 bg-dhl-yellow/20 border-l-4 border-dhl-yellow rounded-sm">
-                    <div className="flex items-center gap-2">
+                  <div className="p-4 bg-dhl-yellow/10 border-l-4 border-dhl-yellow rounded-sm">
+                    <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-dhl-yellow" />
                       <div>
-                        <div className="text-xs text-dhl-gray-600 uppercase tracking-wider font-bold">Estimated Delivery</div>
-                        <div className="font-black text-dhl-black dark:text-white text-lg">
+                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Estimated Delivery</div>
+                        <div className="font-black text-white text-lg">
                           {new Date(packageData.estimatedDelivery).toLocaleDateString('en-US', {
                             weekday: 'long',
                             year: 'numeric',
@@ -361,8 +389,8 @@ const TrackingResult = ({ packageData }) => {
                 )}
 
                 {packageData.stopReason && (
-                  <div className="mt-4 p-4 bg-dhl-red/20 border-l-4 border-dhl-red rounded-sm">
-                    <div className="flex items-center gap-2">
+                  <div className="p-4 bg-dhl-red/20 border-l-4 border-dhl-red rounded-sm">
+                    <div className="flex items-center gap-3">
                       <AlertTriangle className="w-5 h-5 text-dhl-red" />
                       <div>
                         <div className="text-xs text-dhl-red uppercase tracking-wider font-bold">Delivery Stopped</div>
