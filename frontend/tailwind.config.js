@@ -8,28 +8,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
-        dxt: {
-          primary: '#0ea5e9',
-          secondary: '#6366f1',
-          accent: '#f59e0b',
-          dark: '#0f172a',
-          light: '#f8fafc',
+        dhl: {
+          yellow: '#FFCC00',
+          'yellow-light': '#FFE033',
+          'yellow-dark': '#E6B800',
+          red: '#D40511',
+          'red-dark': '#B0040E',
+          black: '#1A1A1A',
+          'gray-900': '#0F172A',
+          'gray-800': '#1E293B',
+          'gray-700': '#334155',
+          'gray-600': '#475569',
+          'gray-500': '#64748B',
+          'gray-400': '#94A3B8',
+          'gray-300': '#CBD5E1',
+          'gray-200': '#E2E8F0',
+          'gray-100': '#F1F5F9',
+          'gray-50': '#F8FAFC',
+          white: '#FFFFFF',
         }
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
       },
       animation: {
         'float': 'float 6s ease-in-out infinite',
@@ -38,6 +39,8 @@ export default {
         'fade-in': 'fadeIn 0.5s ease-out',
         'bounce-slow': 'bounce 3s infinite',
         'truck-move': 'truckMove 20s linear infinite',
+        'shimmer': 'shimmer 2s linear infinite',
+        'progress': 'progress 1.5s ease-in-out forwards',
       },
       keyframes: {
         float: {
@@ -55,6 +58,14 @@ export default {
         truckMove: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100vw)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        progress: {
+          '0%': { width: '0%' },
+          '100%': { width: 'var(--progress-width)' },
         },
       },
     },

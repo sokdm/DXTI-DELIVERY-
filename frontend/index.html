@@ -4,12 +4,60 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DXTI DELIVERY 🚚 - Fast, Secure, Reliable</title>
+    <title>DXTI DELIVERY - Fast, Secure, Reliable Logistics</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      #error-display {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #1a1a1a;
+        color: #FFCC00;
+        padding: 20px;
+        font-family: monospace;
+        font-size: 14px;
+        z-index: 99999;
+        overflow: auto;
+        display: none;
+      }
+      #error-display.active {
+        display: block;
+      }
+      #error-display h1 {
+        color: #D40511;
+        font-size: 20px;
+        margin-bottom: 15px;
+      }
+      #error-display .error-box {
+        background: #000;
+        border: 2px solid #D40511;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        color: #ff6b6b;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+    </style>
   </head>
   <body>
+    <div id="error-display">
+      <h1>⚠️ DXTI ERROR</h1>
+      <div class="error-box" id="error-message"></div>
+      <button onclick="location.reload()" style="background:#FFCC00;color:#1a1a1a;border:none;padding:15px 30px;font-size:16px;font-weight:bold;border-radius:4px;cursor:pointer;">🔄 Reload</button>
+    </div>
     <div id="root"></div>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        document.getElementById('error-display').className = 'active';
+        document.getElementById('error-message').textContent = 
+          'Error: ' + msg + '\n\nFile: ' + url + '\nLine: ' + line + ':' + col + '\n\n' + (error ? error.stack : 'No stack trace');
+        return true;
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

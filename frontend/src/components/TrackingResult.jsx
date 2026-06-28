@@ -1,269 +1,353 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Package, 
-  MapPin, 
-  User, 
-  Phone, 
-  Mail, 
-  DollarSign, 
-  Calendar,
-  Truck,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Stamp
+  Package, MapPin, Calendar, Clock, Truck, CheckCircle, 
+  AlertTriangle, ChevronDown, ChevronUp, 
+  Weight, Ruler, User, Mail, Box, Navigation, Send
 } from 'lucide-react';
-import { format } from 'date-fns';
 import MapTracker from './MapTracker';
 
+const statusConfig = {
+  pending: {
+    color: 'bg-dhl-yellow text-dhl-black',
+    icon: Box,
+    label: 'PENDING',
+    progress: 10,
+  },
+  in_transit: {
+    color: 'bg-blue-500 text-white',
+    icon: Truck,
+    label: 'IN TRANSIT',
+    progress: 50,
+  },
+  arrived: {
+    color: 'bg-purple-500 text-white',
+    icon: MapPin,
+    label: 'ARRIVED',
+    progress: 75,
+  },
+  delivered: {
+    color: 'bg-green-500 text-white',
+    icon: CheckCircle,
+    label: 'DELIVERED',
+    progress: 100,
+  },
+  stopped: {
+    color: 'bg-dhl-red text-white',
+    icon: AlertTriangle,
+    label: 'STOPPED',
+    progress: 0,
+  },
+};
+
 const TrackingResult = ({ packageData }) => {
-  const [currentLocation, setCurrentLocation] = useState(packageData.currentLocation);
+  const [showDetails, setShowDetails] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
 
-  // Update location every 30 seconds if in transit
-  useEffect(() => {
-    if (packageData.status === 'in_transit') {
-      const interval = setInterval(() => {
-        setCurrentLocation(prev => ({
-          ...prev,
-          lat: prev.lat + (packageData.destinationLocation.lat - prev.lat) * 0.001,
-          lng: prev.lng + (packageData.destinationLocation.lng - prev.lng) * 0.001,
-        }));
-      }, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [packageData.status]);
+  const status = packageData?.status || 'pending';
+  const config = statusConfig[status] || statusConfig.pending;
+  const StatusIcon = config.icon;
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'delivered':
-        return <CheckCircle className="w-6 h-6 text-green-500" />;
-      case 'in_transit':
-        return <Truck className="w-6 h-6 text-blue-500" />;
-      case 'stopped':
-        return <AlertCircle className="w-6 h-6 text-red-500" />;
-      case 'arrived':
-        return <CheckCircle className="w-6 h-6 text-purple-500" />;
-      default:
-        return <Clock className="w-6 h-6 text-yellow-500" />;
-    }
-  };
+  const timeline = packageData?.timeline || [];
+  const currentLocation = packageData?.currentLocation;
+  const destination = packageData?.destination;
+  const origin = packageData?.originLocation || packageData?.origin;
 
-  const getStatusText = (status) => {
-    const texts = {
-      pending: 'Pending',
-      in_transit: 'In Transit',
-      arrived: 'Arrived at Destination',
-      delivered: 'Delivered',
-      stopped: 'Delivery Stopped',
-    };
-    return texts[status] || status;
-  };
+  const progress = packageData?.progress || config.progress;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-8"
+      className="space-y-6"
     >
-      {/* Status Banner */}
-      <div className={`glass-card p-6 border-l-4 ${
-        packageData.status === 'stopped' ? 'border-red-500 bg-red-50/50' :
-        packageData.status === 'delivered' ? 'border-green-500' :
-        packageData.status === 'in_transit' ? 'border-blue-500' :
-        packageData.status === 'arrived' ? 'border-purple-500' :
-        'border-yellow-500'
-      }`}>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            {getStatusIcon(packageData.status)}
+      {/* Status Header */}
+      <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg border-t-4 border-dhl-yellow overflow-hidden">
+        <div className="p-6 md:p-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                {getStatusText(packageData.status)}
+              <div className="flex items-center gap-3 mb-2">
+                <span className={`px-4 py-1.5 text-sm font-black uppercase tracking-wider ${config.color}`}>
+                  <StatusIcon className="w-4 h-4 inline mr-2" />
+                  {config.label}
+                </span>
+                {packageData?.stopReason && (
+                  <span className="px-3 py-1 bg-dhl-red text-white text-xs font-bold uppercase">
+                    STOPPED
+                  </span>
+                )}
+              </div>
+              <h2 className="text-3xl font-black text-dhl-black dark:text-white uppercase">
+                {packageData?.trackingCode || 'N/A'}
               </h2>
-              <p className="text-slate-500 dark:text-slate-400">
-                Tracking Code: <span className="font-mono font-semibold">{packageData.trackingCode}</span>
+              <p className="text-dhl-gray-500 dark:text-dhl-gray-400 mt-1">
+                {packageData?.description || 'Package in transit'}
               </p>
+            </div>
+
+            <div className="text-right">
+              <div className="text-4xl font-black text-dhl-yellow">{Math.round(progress)}%</div>
+              <div className="text-sm text-dhl-gray-500 uppercase tracking-wider">Complete</div>
             </div>
           </div>
-          
-          {/* STOPPED Badge - Prominent */}
-          {packageData.status === 'stopped' && (
-            <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 rounded-xl p-4 max-w-md animate-pulse">
-              <p className="text-red-700 dark:text-red-400 font-bold flex items-center gap-2 text-lg">
-                <AlertCircle className="w-6 h-6" />
-                STOPPED
-              </p>
-              {packageData.stopReason && (
-                <p className="text-red-600 dark:text-red-300 mt-2 font-medium">
-                  Reason: {packageData.stopReason}
-                </p>
-              )}
+
+          {/* Progress Bar */}
+          <div className="relative h-3 bg-dhl-gray-200 dark:bg-dhl-gray-700 rounded-full overflow-hidden mb-6">
+            <motion.div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-dhl-yellow to-dhl-red"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+          </div>
+
+          {/* Route Info */}
+          <div className="flex items-center justify-between bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-dhl-yellow flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-dhl-black" />
+              </div>
+              <div>
+                <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">From</div>
+                <div className="font-bold text-dhl-black dark:text-white">
+                  {typeof packageData?.origin === 'string' ? packageData.origin : (packageData?.origin?.locationName || packageData?.originLocation?.locationName || 'Origin')}
+                </div>
+              </div>
             </div>
-          )}
+
+            <div className="flex-1 mx-4 md:mx-8 relative">
+              <div className="h-0.5 bg-dhl-gray-300 dark:bg-dhl-gray-600"></div>
+              <motion.div
+                className="absolute top-1/2 -translate-y-1/2"
+                animate={{ left: `${progress}%` }}
+                transition={{ duration: 1.5 }}
+              >
+                <Truck className="w-6 h-6 text-dhl-yellow -translate-x-1/2" />
+              </motion.div>
+            </div>
+
+            <div className="flex items-center gap-3 text-right">
+              <div>
+                <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">To</div>
+                <div className="font-bold text-dhl-black dark:text-white">
+                  {destination?.locationName || 'Destination'}
+                </div>
+              </div>
+              <div className="w-10 h-10 bg-dhl-red flex items-center justify-center">
+                <Navigation className="w-5 h-5 text-white" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Map with country borders and stop badge */}
-      <MapTracker 
-        currentLocation={currentLocation}
-        destination={packageData.destinationLocation}
-        status={packageData.status}
-        progress={packageData.movementProgress}
-        stopReason={packageData.stopReason}
-      />
+      {/* Map */}
+      {currentLocation && destination && (
+        <MapTracker 
+          currentLocation={currentLocation}
+          destination={destination}
+          origin={origin}
+          status={status}
+          progress={progress / 100}
+          stopReason={packageData?.stopReason}
+        />
+      )}
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Package Image & Details */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-6"
+      {/* Timeline */}
+      <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden">
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="w-full p-6 flex items-center justify-between hover:bg-dhl-gray-50 dark:hover:bg-dhl-gray-800 transition-colors"
         >
-          {/* Package Image */}
-          <div className="glass-card overflow-hidden">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Package className="w-5 h-5 text-dxt-primary" />
-                Package Image
-              </h3>
-            </div>
-            <div className="p-4">
-              <img
-                src={packageData.packageImage}
-                alt={packageData.packageName}
-                className="w-full h-64 object-cover rounded-xl"
-              />
-            </div>
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-dhl-yellow" />
+            <h3 className="text-lg font-black text-dhl-black dark:text-white uppercase">Tracking History</h3>
           </div>
+          {showHistory ? <ChevronUp className="w-5 h-5 text-dhl-gray-400" /> : <ChevronDown className="w-5 h-5 text-dhl-gray-400" />}
+        </button>
 
-          {/* Package Details */}
-          <div className="glass-card p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-dxt-primary" />
-              Package Details
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between py-2 border-b border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 dark:text-slate-400">Name</span>
-                <span className="font-medium text-slate-900 dark:text-white">{packageData.packageName}</span>
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="px-6 pb-6">
+                <div className="relative">
+                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-dhl-gray-200 dark:bg-dhl-gray-700"></div>
+                  
+                  {timeline.length > 0 ? (
+                    timeline.map((event, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="relative flex items-start gap-4 mb-6 last:mb-0"
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+                          index === 0 ? 'bg-dhl-yellow text-dhl-black' : 'bg-dhl-gray-200 dark:bg-dhl-gray-700 text-dhl-gray-500'
+                        }`}>
+                          <CheckCircle className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-dhl-black dark:text-white uppercase text-sm">
+                              {event.status?.replace('_', ' ')}
+                            </span>
+                            <span className="text-xs text-dhl-gray-500">
+                              {new Date(event.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-dhl-gray-600 dark:text-dhl-gray-300 text-sm">
+                            {event.location} - {event.description}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-dhl-gray-500">
+                      No tracking history available yet.
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 dark:text-slate-400">Description</span>
-                <span className="font-medium text-slate-900 dark:text-white text-right max-w-xs">
-                  {packageData.packageDescription}
-                </span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 dark:text-slate-400">Weight</span>
-                <span className="font-medium text-slate-900 dark:text-white">{packageData.packageWeight} kg</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-slate-500 dark:text-slate-400">Delivery Price</span>
-                <span className="font-bold text-dxt-primary text-lg">
-                  ${packageData.deliveryPrice.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-        {/* Sender & Receiver Details */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-6"
+      {/* Package Details */}
+      <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden">
+        <button
+          onClick={() => setShowDetails(!showDetails)}
+          className="w-full p-6 flex items-center justify-between hover:bg-dhl-gray-50 dark:hover:bg-dhl-gray-800 transition-colors"
         >
-          {/* Sender Details */}
-          <div className="glass-card p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-dxt-secondary" />
-              Sender Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <User className="w-4 h-4 text-slate-400" />
-                <span className="font-medium">{packageData.senderName}</span>
-              </div>
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <Phone className="w-4 h-4 text-slate-400" />
-                <span>{packageData.senderPhone}</span>
-              </div>
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <Mail className="w-4 h-4 text-slate-400" />
-                <span>{packageData.senderEmail}</span>
-              </div>
-              <div className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                <MapPin className="w-4 h-4 text-slate-400 mt-1" />
-                <span>
-                  {packageData.senderAddress}, {packageData.senderCity}, {packageData.senderCountry}
-                </span>
-              </div>
-            </div>
+          <div className="flex items-center gap-3">
+            <Package className="w-5 h-5 text-dhl-yellow" />
+            <h3 className="text-lg font-black text-dhl-black dark:text-white uppercase">Package Details</h3>
           </div>
+          {showDetails ? <ChevronUp className="w-5 h-5 text-dhl-gray-400" /> : <ChevronDown className="w-5 h-5 text-dhl-gray-400" />}
+        </button>
 
-          {/* Receiver Details */}
-          <div className="glass-card p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-green-500" />
-              Receiver Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <User className="w-4 h-4 text-slate-400" />
-                <span className="font-medium">{packageData.receiverName}</span>
-                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-xs capitalize">
-                  {packageData.receiverGender}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <Phone className="w-4 h-4 text-slate-400" />
-                <span>{packageData.receiverPhone}</span>
-              </div>
-              <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                <Mail className="w-4 h-4 text-slate-400" />
-                <span>{packageData.receiverEmail}</span>
-              </div>
-              <div className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                <MapPin className="w-4 h-4 text-slate-400 mt-1" />
-                <span>
-                  {packageData.receiverAddress}, {packageData.receiverCity}, {packageData.receiverCountry}
-                </span>
-              </div>
-            </div>
-          </div>
+        <AnimatePresence>
+          {showDetails && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="px-6 pb-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
+                      <User className="w-5 h-5 text-dhl-yellow" />
+                      <div>
+                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Sender</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.sender?.name || 'N/A'}</div>
+                        <div className="text-sm text-dhl-gray-500">{packageData?.sender?.phone || ''}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
+                      <User className="w-5 h-5 text-dhl-red" />
+                      <div>
+                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Recipient</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.recipient?.name || 'N/A'}</div>
+                        <div className="text-sm text-dhl-gray-500">{packageData?.recipient?.phone || ''}</div>
+                      </div>
+                    </div>
+                  </div>
 
-          {/* Receipt Info */}
-          <div className="glass-card p-6 bg-gradient-to-br from-dxt-primary/5 to-dxt-secondary/5">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-dxt-accent" />
-              Receipt Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between py-2 border-b border-slate-200 dark:border-slate-700 border-dashed">
-                <span className="text-slate-500 dark:text-slate-400">Receipt ID</span>
-                <span className="font-mono font-medium text-slate-900 dark:text-white">
-                  {packageData.receipt.receiptId}
-                </span>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
+                      <Weight className="w-5 h-5 text-dhl-yellow" />
+                      <div>
+                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Weight</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.weight || 'N/A'} kg</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
+                      <Ruler className="w-5 h-5 text-dhl-red" />
+                      <div>
+                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Dimensions</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{packageData?.dimensions || 'N/A'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {packageData?.estimatedDelivery && (
+                  <div className="mt-4 p-4 bg-dhl-yellow/20 border-l-4 border-dhl-yellow rounded-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-dhl-yellow" />
+                      <div>
+                        <div className="text-xs text-dhl-gray-600 uppercase tracking-wider font-bold">Estimated Delivery</div>
+                        <div className="font-black text-dhl-black dark:text-white text-lg">
+                          {new Date(packageData.estimatedDelivery).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {packageData?.stopReason && (
+                  <div className="mt-4 p-4 bg-dhl-red/20 border-l-4 border-dhl-red rounded-sm">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-dhl-red" />
+                      <div>
+                        <div className="text-xs text-dhl-red uppercase tracking-wider font-bold">Delivery Stopped</div>
+                        <div className="font-semibold text-dhl-red">{packageData.stopReason}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-200 dark:border-slate-700 border-dashed">
-                <span className="text-slate-500 dark:text-slate-400">Created</span>
-                <span className="font-medium text-slate-900 dark:text-white">
-                  {format(new Date(packageData.receipt.createdAt), 'MMM dd, yyyy HH:mm')}
-                </span>
-              </div>
-              <div className="mt-4 p-4 bg-dxt-primary/10 rounded-xl border-2 border-dxt-primary/30">
-                <p className="text-center font-bold text-dxt-primary text-lg tracking-wider flex items-center justify-center gap-2">
-                  <Stamp className="w-6 h-6" />
-                  ✓ STAMPED BY DXT DELIVERY
-                </p>
-              </div>
-            </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Support Banner - Telegram + Email */}
+      <div className="bg-dhl-gray-900 rounded-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-dhl-yellow rounded-sm">
+            <Mail className="w-6 h-6 text-dhl-black" />
           </div>
-        </motion.div>
+          <div>
+            <div className="text-white font-bold">Need Help?</div>
+            <div className="text-dhl-gray-400 text-sm">Contact our support team</div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <a 
+            href="https://t.me/Dhl5788"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold uppercase tracking-wider rounded-sm hover:bg-blue-600 transition-colors"
+          >
+            <Send className="w-4 h-4" />
+            Telegram @Dhl5788
+          </a>
+          <a 
+            href="mailto:dhld5736@gmail.com" 
+            className="inline-flex items-center gap-2 px-6 py-3 bg-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-sm hover:bg-dhl-yellow-light transition-colors"
+          >
+            <Mail className="w-4 h-4" />
+            dhld5736@gmail.com
+          </a>
+        </div>
       </div>
     </motion.div>
   );

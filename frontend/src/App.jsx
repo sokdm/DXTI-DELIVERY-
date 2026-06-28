@@ -5,11 +5,13 @@ import Track from './pages/Track';
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/track" element={<Track />} />
-      <Route path="/track/:trackingCode" element={<Track />} />
-    </Routes>
+    <div className="min-h-screen bg-white dark:bg-dhl-gray-900 transition-colors duration-300">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/track" element={<Track />} />
+        <Route path="/track/:trackingCode" element={<Track />} />
+      </Routes>
+    </div>
   );
 }
 

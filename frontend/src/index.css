@@ -6,59 +6,95 @@
   * {
     @apply transition-colors duration-300;
   }
-  
+
   body {
     @apply font-sans antialiased;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 }
 
 @layer components {
-  .glass {
-    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-700/30;
+  /* DHL Yellow accent button */
+  .btn-dhl {
+    @apply px-6 py-3 bg-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-sm shadow-lg hover:bg-dhl-yellow-light hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
   }
-  
+
+  .btn-dhl-outline {
+    @apply px-6 py-3 bg-transparent border-2 border-dhl-yellow text-dhl-yellow font-bold uppercase tracking-wider rounded-sm hover:bg-dhl-yellow hover:text-dhl-black transition-all duration-300;
+  }
+
+  .btn-dhl-red {
+    @apply px-6 py-3 bg-dhl-red text-white font-bold uppercase tracking-wider rounded-sm shadow-lg hover:bg-dhl-red-dark hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
+  }
+
+  /* Input field */
+  .input-dhl {
+    @apply w-full px-4 py-3 rounded-sm border-2 border-dhl-gray-300 dark:border-dhl-gray-700 bg-white dark:bg-dhl-gray-800 text-dhl-black dark:text-white focus:ring-2 focus:ring-dhl-yellow focus:border-dhl-yellow outline-none transition-all duration-300;
+  }
+
+  /* Glass card */
   .glass-card {
-    @apply bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg rounded-2xl border border-white/30 dark:border-slate-700/50 shadow-xl;
+    @apply bg-white/90 dark:bg-dhl-gray-900/90 backdrop-blur-lg rounded-sm border border-dhl-gray-200 dark:border-dhl-gray-700 shadow-xl;
   }
-  
-  .gradient-text {
-    @apply bg-gradient-to-r from-dxt-primary to-dxt-secondary bg-clip-text text-transparent;
-  }
-  
-  .btn-primary {
-    @apply px-6 py-3 bg-gradient-to-r from-dxt-primary to-dxt-secondary text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
-  }
-  
-  .btn-secondary {
-    @apply px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300;
-  }
-  
-  .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-dxt-primary focus:border-transparent outline-none transition-all duration-300;
-  }
-  
+
+  /* Status badges */
   .status-badge {
-    @apply px-3 py-1 rounded-full text-sm font-medium;
+    @apply px-4 py-1.5 text-sm font-bold uppercase tracking-wider;
   }
-  
+
   .status-pending {
-    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+    @apply bg-dhl-yellow text-dhl-black;
   }
-  
+
   .status-in_transit {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400;
+    @apply bg-blue-500 text-white;
   }
-  
+
   .status-arrived {
-    @apply bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400;
+    @apply bg-purple-500 text-white;
   }
-  
+
   .status-delivered {
-    @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+    @apply bg-green-500 text-white;
   }
-  
+
   .status-stopped {
-    @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+    @apply bg-dhl-red text-white;
+  }
+
+  /* Section styling */
+  .section-yellow {
+    @apply bg-dhl-yellow;
+  }
+
+  .section-red {
+    @apply bg-dhl-red;
+  }
+
+  .section-dark {
+    @apply bg-dhl-gray-900;
+  }
+
+  .section-light {
+    @apply bg-dhl-gray-50 dark:bg-dhl-gray-900;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-dhl-yellow to-dhl-yellow-light bg-clip-text text-transparent;
+  }
+
+  /* Image overlay */
+  .img-overlay {
+    @apply relative overflow-hidden;
+  }
+
+  .img-overlay::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-t from-dhl-black/70 via-transparent to-transparent;
   }
 }
 
@@ -69,25 +105,21 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-slate-100 dark:bg-slate-900;
+  @apply bg-dhl-gray-100 dark:bg-dhl-gray-900;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+  @apply bg-dhl-gray-400 dark:bg-dhl-gray-600 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400 dark:bg-slate-600;
+  @apply bg-dhl-gray-500 dark:bg-dhl-gray-500;
 }
 
 /* Leaflet map custom styles */
 .leaflet-container {
-  @apply rounded-2xl;
+  @apply rounded-sm;
   font-family: 'Inter', sans-serif;
-}
-
-.custom-marker {
-  @apply transition-transform duration-500;
 }
 
 /* Truck animation */
@@ -111,4 +143,30 @@
     transform: scale(2);
     opacity: 0;
   }
+}
+
+/* DHL stripe pattern */
+.dhl-stripe {
+  background: repeating-linear-gradient(
+    45deg,
+    #FFCC00,
+    #FFCC00 10px,
+    #D40511 10px,
+    #D40511 20px
+  );
+}
+
+/* Diagonal stripe accent */
+.diagonal-accent {
+  position: relative;
+}
+
+.diagonal-accent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(135deg, #FFCC00 50%, #D40511 50%);
 }

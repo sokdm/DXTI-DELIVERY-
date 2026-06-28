@@ -1,56 +1,44 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Mail, MessageCircle, Clock, Copy, Check } from 'lucide-react';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Mail, MessageCircle, Clock, MapPin, Headphones, Send, ExternalLink } from 'lucide-react';
+
+const contactMethods = [
+  {
+    icon: Send,
+    title: 'Telegram',
+    description: 'Chat with us on Telegram',
+    action: '@Dhl5788',
+    href: 'https://t.me/Dhl5788',
+    color: 'bg-blue-500',
+    textColor: 'text-white',
+    available: '24/7',
+  },
+  {
+    icon: Mail,
+    title: 'Email',
+    description: 'Send us an email',
+    action: 'dhld5736@gmail.com',
+    href: 'mailto:dhld5736@gmail.com',
+    color: 'bg-dhl-yellow',
+    textColor: 'text-dhl-black',
+    available: '24/7',
+  },
+];
 
 const Support = () => {
-  const [copied, setCopied] = useState(false);
-  const [showNumber, setShowNumber] = useState(null);
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const supportItems = [
-    {
-      id: 'whatsapp',
-      icon: MessageCircle,
-      title: 'WhatsApp',
-      subtitle: 'Chat with us instantly',
-      color: 'from-green-500 to-emerald-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      action: 'https://wa.me/2348050232564',
-      number: '+234 805 023 2564',
-      type: 'link'
-    },
-    {
-      id: 'phone',
-      icon: Phone,
-      title: 'Phone',
-      subtitle: 'Call our hotline',
-      color: 'from-dxt-primary to-dxt-secondary',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      action: 'tel:+2348050232564',
-      number: '+234 805 023 2564',
-      type: 'link'
-    },
-    {
-      id: 'email',
-      icon: Mail,
-      title: 'Email',
-      subtitle: 'Send us a message',
-      color: 'from-dxt-secondary to-purple-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      action: 'mailto:dhld5736@gmail.com',
-      email: 'dhld5736@gmail.com',
-      type: 'email'
-    }
-  ];
-
   return (
-    <section id="contact" className="py-24 bg-slate-50 dark:bg-slate-900/50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="contact" className="relative py-24 bg-dhl-gray-900 overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1556740758-90de374c12ad?w=1200&q=80"
+          alt="Support Team"
+          className="w-full h-full object-cover opacity-20"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-dhl-gray-900 via-dhl-gray-900/90 to-dhl-gray-900"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -58,125 +46,83 @@ const Support = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            Need <span className="gradient-text">Help?</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-dhl-yellow/20 border-l-4 border-dhl-yellow mb-6">
+            <span className="text-dhl-yellow font-bold uppercase tracking-wider text-sm">
+              24/7 Support
+            </span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black text-white uppercase mb-4">
+            Need <span className="text-dhl-yellow">Help?</span>
           </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-300">
-            Our support team is available 24/7 to assist you
+          <p className="text-lg text-dhl-gray-300 max-w-2xl mx-auto">
+            Our support team is available 24/7 to assist you with any questions or concerns.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          {supportItems.map((item, index) => (
-            <motion.div
-              key={item.id}
+        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
+          {contactMethods.map((method, index) => (
+            <motion.a
+              key={method.title}
+              href={method.href}
+              target={method.title === 'Telegram' ? '_blank' : undefined}
+              rel={method.title === 'Telegram' ? 'noopener noreferrer' : undefined}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="relative group"
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="block bg-white/10 backdrop-blur-lg border border-white/20 rounded-sm p-8 text-center hover:bg-white/20 transition-all duration-300 group"
             >
-              {item.type === 'link' ? (
-                <a
-                  href={item.action}
-                  className="block glass-card p-8 text-center cursor-pointer hover:scale-105 transition-transform duration-300"
-                >
-                  <div className={`w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow`}>
-                    <item.icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-300 mb-4">
-                    {item.subtitle}
-                  </p>
-                  
-                  {/* Hidden number - shown on tap/hover */}
-                  <div className="relative">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 rounded-full text-sm font-mono text-slate-700 dark:text-slate-300">
-                        {item.number}
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300">
-                      <span className="text-sm text-dxt-primary font-medium flex items-center gap-1">
-                        Tap to {item.id === 'whatsapp' ? 'chat' : 'call'}
-                        <motion.span
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.5 }}
-                        >
-                          →
-                        </motion.span>
-                      </span>
-                    </div>
-                  </div>
-                </a>
-              ) : (
-                <div className="glass-card p-8 text-center">
-                  <a
-                    href={item.action}
-                    className="block cursor-pointer hover:scale-105 transition-transform duration-300"
-                  >
-                    <div className={`w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow`}>
-                      <item.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-300 mb-4">
-                      {item.subtitle}
-                    </p>
-                  </a>
-                  
-                  {/* Email with copy button */}
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-sm font-mono text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
-                      {item.email}
-                    </span>
-                    <button
-                      onClick={() => copyToClipboard(item.email)}
-                      className="p-1.5 rounded-full bg-slate-200 dark:bg-slate-600 hover:bg-dxt-primary hover:text-white transition-colors"
-                      title="Copy email"
-                    >
-                      <AnimatePresence mode="wait">
-                        {copied ? (
-                          <motion.div
-                            key="check"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0 }}
-                          >
-                            <Check className="w-4 h-4 text-green-500" />
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="copy"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0 }}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </button>
-                  </div>
+              <div className={`w-16 h-16 ${method.color} flex items-center justify-center mx-auto mb-6 shadow-lg`}>
+                <method.icon className={`w-8 h-8 ${method.textColor}`} />
+              </div>
+
+              <h3 className="text-xl font-black text-white uppercase mb-2">
+                {method.title}
+              </h3>
+
+              <p className="text-dhl-gray-400 mb-4 text-sm">
+                {method.description}
+              </p>
+
+              <div className="text-dhl-yellow font-bold text-lg mb-4">
+                {method.action}
+              </div>
+
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-dhl-yellow/20 text-dhl-yellow text-sm font-bold uppercase tracking-wider rounded-sm">
+                <Clock className="w-4 h-4" />
+                {method.available}
+              </div>
+
+              {method.title === 'Telegram' && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-dhl-gray-400 text-sm">
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Tap to open Telegram</span>
                 </div>
               )}
-            </motion.div>
+            </motion.a>
           ))}
         </div>
 
-        {/* Availability */}
+        {/* Availability Banner */}
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-12 flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400"
+          transition={{ duration: 0.6 }}
+          className="bg-dhl-yellow rounded-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4"
         >
-          <Clock className="w-5 h-5" />
-          <span>Available 24/7 - All days including weekends and holidays</span>
+          <div className="flex items-center gap-4">
+            <Headphones className="w-10 h-10 text-dhl-black" />
+            <div>
+              <h3 className="text-xl font-black text-dhl-black uppercase">Available 24/7</h3>
+              <p className="text-dhl-black/70 text-sm">All days including weekends and holidays</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-dhl-black font-bold">
+            <MapPin className="w-5 h-5" />
+            <span>Global Support Network</span>
+          </div>
         </motion.div>
       </div>
     </section>
