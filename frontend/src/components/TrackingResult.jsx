@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, MapPin, Calendar, Clock, Truck, CheckCircle, 
-  AlertTriangle, ChevronDown, ChevronUp, 
+  AlertTriangle, ChevronDown, ChevronUp, X,
   Weight, DollarSign, User, Mail, Box, Navigation, Send
 } from 'lucide-react';
 import MapTracker from './MapTracker';
@@ -40,7 +40,6 @@ const statusConfig = {
   },
 };
 
-// Safe location name helper
 const getLocationName = (loc) => {
   if (!loc) return null;
   if (typeof loc === 'string') return loc;
@@ -50,7 +49,6 @@ const getLocationName = (loc) => {
   return null;
 };
 
-// Format address cleanly
 const formatAddress = (address, city, country) => {
   const parts = [];
   if (address && address.trim()) parts.push(address.trim());
@@ -62,12 +60,12 @@ const formatAddress = (address, city, country) => {
 const TrackingResult = ({ packageData }) => {
   const [showDetails, setShowDetails] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   const status = packageData.status || 'pending';
   const config = statusConfig[status] || statusConfig.pending;
   const StatusIcon = config.icon;
 
-  // Backend field names
   const sender = {
     name: packageData.senderName,
     phone: packageData.senderPhone,
@@ -113,6 +111,34 @@ const TrackingResult = ({ packageData }) => {
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
+      {/* Lightbox for package image */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
+            onClick={() => setLightboxImage(null)}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 p-3 bg-dhl-yellow text-dhl-black rounded-sm hover:bg-dhl-yellow-light transition-colors z-10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              src={lightboxImage}
+              alt="Package"
+              className="max-w-full max-h-[90vh] object-contain rounded-sm"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Status Header */}
       <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg border-t-4 border-dhl-yellow overflow-hidden">
         <div className="p-6 md:p-8">
@@ -143,7 +169,6 @@ const TrackingResult = ({ packageData }) => {
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div className="relative h-4 bg-dhl-gray-200 dark:bg-dhl-gray-700 rounded-full overflow-hidden mb-6">
             <motion.div
               className="absolute inset-y-0 left-0 bg-gradient-to-r from-dhl-yellow to-dhl-red"
@@ -154,7 +179,6 @@ const TrackingResult = ({ packageData }) => {
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
           </div>
 
-          {/* Route Info */}
           <div className="flex items-center justify-between bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-dhl-yellow flex items-center justify-center rounded-sm">
@@ -190,7 +214,6 @@ const TrackingResult = ({ packageData }) => {
         </div>
       </div>
 
-      {/* Map */}
       {currentLocation && destination && (
         <MapTracker 
           currentLocation={currentLocation}
@@ -202,7 +225,6 @@ const TrackingResult = ({ packageData }) => {
         />
       )}
 
-      {/* Timeline */}
       <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden">
         <button
           onClick={() => setShowHistory(!showHistory)}
@@ -266,8 +288,6 @@ const TrackingResult = ({ packageData }) => {
           )}
         </AnimatePresence>
       </div>
-
-      {/* Package Details - Dynamic Theme */}
       <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden border border-dhl-gray-200 dark:border-dhl-gray-700">
         <button
           onClick={() => setShowDetails(!showDetails)}
@@ -291,28 +311,38 @@ const TrackingResult = ({ packageData }) => {
             >
               <div className="px-6 pb-6 space-y-4">
                 
-                {/* Package Name + Image - BIGGER */}
+                {/* Package Name + Image - TAP TO VIEW FULL SIZE */}
                 <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm border-l-4 border-dhl-yellow">
                   <div className="flex items-center gap-5">
                     {packageImage && (
-                      <div className="flex-shrink-0">
+                      <motion.div 
+                        className="flex-shrink-0 cursor-pointer group relative"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setLightboxImage(packageImage)}
+                      >
                         <img 
                           src={packageImage} 
                           alt={packageName || 'Package'} 
-                          className="w-28 h-28 object-cover rounded-sm shadow-md"
+                          className="w-36 h-36 object-cover rounded-sm shadow-lg group-hover:shadow-xl transition-shadow"
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
-                      </div>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-sm flex items-center justify-center">
+                          <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                          </svg>
+                        </div>
+                      </motion.div>
                     )}
                     <div className="flex-1">
                       <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold mb-1">Package</div>
                       <div className="font-black text-dhl-black dark:text-white text-2xl tracking-tight">{packageName || 'Parcel'}</div>
                       {description && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-semibold mt-1">{description}</div>}
+                      <div className="text-xs text-dhl-gray-400 mt-2 font-medium">Tap image to view full size</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Sender */}
                 <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-dhl-yellow/20 dark:bg-dhl-yellow/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -328,7 +358,6 @@ const TrackingResult = ({ packageData }) => {
                   </div>
                 </div>
 
-                {/* Recipient */}
                 <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-dhl-red/20 dark:bg-dhl-red/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -344,7 +373,6 @@ const TrackingResult = ({ packageData }) => {
                   </div>
                 </div>
 
-                {/* Weight & Price Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
                     <div className="flex items-center gap-4">
@@ -405,7 +433,7 @@ const TrackingResult = ({ packageData }) => {
           )}
         </AnimatePresence>
       </div>
-      {/* Support Banner - Dynamic Theme */}
+
       <div className="bg-dhl-gray-100 dark:bg-dhl-gray-900 rounded-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4 border border-dhl-gray-200 dark:border-dhl-gray-700">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-dhl-yellow rounded-sm">
