@@ -36,18 +36,18 @@ const createTruckIcon = (isStopped) => {
   return L.divIcon({
     className: 'custom-truck-icon',
     html: `<div style="
-      background: ${isStopped ? 'linear-gradient(135deg, #D40511, #a0040d)' : 'linear-gradient(135deg, #FFCC00, #e6b800)'};
+      background: ${isStopped ? 'linear-gradient(135deg, #D40511, #a0040d)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)'};
       width: 44px;
       height: 44px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 15px ${isStopped ? 'rgba(212, 5, 17, 0.5)' : 'rgba(255, 204, 0, 0.5)'};
+      box-shadow: 0 4px 15px ${isStopped ? 'rgba(212, 5, 17, 0.5)' : 'rgba(14, 165, 233, 0.5)'};
       border: 3px solid white;
       animation: ${isStopped ? 'none' : 'pulse 2s infinite'};
     ">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${isStopped ? 'white' : '#333333'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <rect x="1" y="3" width="15" height="13"></rect>
         <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
         <circle cx="5.5" cy="18.5" r="2.5"></circle>
@@ -64,14 +64,14 @@ const createDestinationIcon = () => {
   return L.divIcon({
     className: 'custom-destination-icon',
     html: `<div style="
-      background: linear-gradient(135deg, #D40511, #a0040d);
+      background: linear-gradient(135deg, #10b981, #059669);
       width: 40px;
       height: 40px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 15px rgba(212, 5, 17, 0.5);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
       border: 3px solid white;
     ">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -159,10 +159,10 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
 
   // Country style
   const countryStyle = {
-    fillColor: '#E8E8E8',
+    fillColor: '#e2e8f0',
     weight: 2,
     opacity: 0.6,
-    color: '#999999',
+    color: '#64748b',
     fillOpacity: 0.2,
     dashArray: '3',
   };
@@ -222,7 +222,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
           zoom={4}
           scrollWheelZoom={true}
           className="h-full w-full"
-          style={{ background: '#F5F5F5' }}
+          style={{ background: '#f1f5f9' }}
         >
           <MapController bounds={bounds} />
 
@@ -239,7 +239,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
 
           <Polyline
             positions={pathPoints}
-            color={isStopped ? '#D40511' : '#FFCC00'}
+            color={isStopped ? '#D40511' : '#0ea5e9'}
             weight={4}
             opacity={0.8}
             dashArray={isStopped ? '10, 10' : null}

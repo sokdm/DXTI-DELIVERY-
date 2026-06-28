@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, MapPin, Calendar, Clock, Truck, CheckCircle, 
   AlertTriangle, ChevronDown, ChevronUp, 
-  Weight, Ruler, User, Mail, Box, Navigation, Send
+  Weight, Ruler, User, Mail, Box, Navigation, Send, DollarSign
 } from 'lucide-react';
 import MapTracker from './MapTracker';
 
@@ -40,6 +40,16 @@ const statusConfig = {
   },
 };
 
+// Safe location name helper
+const getLocationName = (loc) => {
+  if (!loc) return null;
+  if (typeof loc === 'string') return loc;
+  if (loc.locationName) return loc.locationName;
+  if (loc.name) return loc.name;
+  if (loc.city) return `${loc.city}${loc.country ? ', ' + loc.country : ''}`;
+  return null;
+};
+
 const TrackingResult = ({ packageData }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
@@ -48,24 +58,41 @@ const TrackingResult = ({ packageData }) => {
   const config = statusConfig[status] || statusConfig.pending;
   const StatusIcon = config.icon;
 
-  const timeline = packageData.timeline || [];
-  const currentLocation = packageData.currentLocation;
-  const destination = packageData.destination;
-
-  const progress = packageData.progress || config.progress;
-
-  // Helper to safely get location name from either string or object
-  const getLocationName = (loc) => {
-    if (!loc) return null;
-    if (typeof loc === 'string') return loc;
-    if (loc.locationName) return loc.locationName;
-    if (loc.name) return loc.name;
-    if (loc.city) return `${loc.city}${loc.country ? ', ' + loc.country : ''}`;
-    return null;
+  // Backend field names
+  const sender = {
+    name: packageData.senderName,
+    phone: packageData.senderPhone,
+    email: packageData.senderEmail,
+    address: packageData.senderAddress,
+    city: packageData.senderCity,
+    country: packageData.senderCountry,
   };
 
-  const originName = getLocationName(packageData.origin) || 'Origin';
-  const destinationName = getLocationName(packageData.destination) || 'Destination';
+  const receiver = {
+    name: packageData.receiverName,
+    phone: packageData.receiverPhone,
+    email: packageData.receiverEmail,
+    address: packageData.receiverAddress,
+    city: packageData.receiverCity,
+    country: packageData.receiverCountry,
+    gender: packageData.receiverGender,
+  };
+
+  const weight = packageData.packageWeight;
+  const price = packageData.deliveryPrice;
+  const description = packageData.packageDescription;
+  const packageName = packageData.packageName;
+
+  const currentLocation = packageData.currentLocation;
+  const destination = packageData.destinationLocation;
+
+  const progress = (packageData.movementProgress !== undefined ? packageData.movementProgress * 100 : config.progress);
+
+  const originName = getLocationName(currentLocation) || 'Origin';
+  const destName = getLocationName(destination) || 'Destination';
+
+  // Build timeline from status history if available, else empty
+  const timeline = packageData.statusHistory || packageData.timeline || [];
 
   return (
     <motion.div
@@ -94,7 +121,7 @@ const TrackingResult = ({ packageData }) => {
                 {packageData.trackingCode}
               </h2>
               <p className="text-dhl-gray-500 dark:text-dhl-gray-400 mt-1">
-                {packageData.description || 'Package in transit'}
+                {description || 'Package in transit'}
               </p>
             </div>
 
@@ -141,7 +168,7 @@ const TrackingResult = ({ packageData }) => {
             <div className="flex items-center gap-3 text-right">
               <div>
                 <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">To</div>
-                <div className="font-bold text-dhl-black dark:text-white">{destinationName}</div>
+                <div className="font-bold text-dhl-black dark:text-white">{destName}</div>
               </div>
               <div className="w-10 h-10 bg-dhl-red flex items-center justify-center">
                 <Navigation className="w-5 h-5 text-white" />
@@ -156,9 +183,9 @@ const TrackingResult = ({ packageData }) => {
         <MapTracker 
           currentLocation={currentLocation}
           destination={destination}
-          origin={packageData.originLocation || packageData.origin}
+          origin={currentLocation}
           status={status}
-          progress={progress / 100}
+          progress={packageData.movementProgress || 0}
           stopReason={packageData.stopReason}
         />
       )}
@@ -208,11 +235,11 @@ const TrackingResult = ({ packageData }) => {
                             {event.status?.replace('_', ' ')}
                           </span>
                           <span className="text-xs text-dhl-gray-500">
-                            {new Date(event.timestamp).toLocaleString()}
+                            {new Date(event.timestamp || event.date).toLocaleString()}
                           </span>
                         </div>
                         <p className="text-dhl-gray-600 dark:text-dhl-gray-300 text-sm">
-                          {event.location} - {event.description}
+                          {event.location || event.description}
                         </p>
                       </div>
                     </motion.div>
@@ -251,39 +278,64 @@ const TrackingResult = ({ packageData }) => {
               className="overflow-hidden"
             >
               <div className="px-6 pb-6">
+                {/* Package Name & Description */}
+                {packageName && (
+                  <div className="mb-4 p-4 bg-dhl-yellow/10 border-l-4 border-dhl-yellow rounded-sm">
+                    <div className="text-xs text-dhl-gray-600 uppercase tracking-wider font-bold">Package</div>
+                    <div className="font-black text-dhl-black dark:text-white text-lg">{packageName}</div>
+                    {description && <div className="text-sm text-dhl-gray-500">{description}</div>}
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                      <User className="w-5 h-5 text-dhl-yellow" />
-                      <div>
+                    {/* Sender */}
+                    <div className="flex items-start gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
+                      <User className="w-5 h-5 text-dhl-yellow mt-1" />
+                      <div className="flex-1">
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Sender</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.sender?.name || 'N/A'}</div>
-                        <div className="text-sm text-dhl-gray-500">{packageData.sender?.phone || ''}</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{sender.name || 'N/A'}</div>
+                        {sender.phone && <div className="text-sm text-dhl-gray-500">{sender.phone}</div>}
+                        {sender.email && <div className="text-sm text-dhl-gray-500">{sender.email}</div>}
+                        {(sender.address || sender.city) && (
+                          <div className="text-sm text-dhl-gray-500 mt-1">
+                            {sender.address}{sender.address && sender.city ? ', ' : ''}{sender.city}{sender.country ? ', ' + sender.country : ''}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                      <User className="w-5 h-5 text-dhl-red" />
-                      <div>
+                    {/* Receiver */}
+                    <div className="flex items-start gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
+                      <User className="w-5 h-5 text-dhl-red mt-1" />
+                      <div className="flex-1">
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Recipient</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.recipient?.name || 'N/A'}</div>
-                        <div className="text-sm text-dhl-gray-500">{packageData.recipient?.phone || ''}</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{receiver.name || 'N/A'}</div>
+                        {receiver.phone && <div className="text-sm text-dhl-gray-500">{receiver.phone}</div>}
+                        {receiver.email && <div className="text-sm text-dhl-gray-500">{receiver.email}</div>}
+                        {(receiver.address || receiver.city) && (
+                          <div className="text-sm text-dhl-gray-500 mt-1">
+                            {receiver.address}{receiver.address && receiver.city ? ', ' : ''}{receiver.city}{receiver.country ? ', ' + receiver.country : ''}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-4">
+                    {/* Weight */}
                     <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
                       <Weight className="w-5 h-5 text-dhl-yellow" />
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Weight</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.weight || 'N/A'} kg</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{weight !== undefined ? weight + ' kg' : 'N/A'}</div>
                       </div>
                     </div>
+                    {/* Price */}
                     <div className="flex items-center gap-3 p-4 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                      <Ruler className="w-5 h-5 text-dhl-red" />
+                      <DollarSign className="w-5 h-5 text-dhl-red" />
                       <div>
-                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Dimensions</div>
-                        <div className="font-semibold text-dhl-black dark:text-white">{packageData.dimensions || 'N/A'}</div>
+                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider">Delivery Price</div>
+                        <div className="font-semibold text-dhl-black dark:text-white">{price !== undefined ? '$' + parseFloat(price).toFixed(2) : 'N/A'}</div>
                       </div>
                     </div>
                   </div>
