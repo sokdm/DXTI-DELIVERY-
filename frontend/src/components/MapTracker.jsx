@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, GeoJSON } from 'react-leaflet';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { motion, AnimatePresence } from 'framer-motion';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -31,19 +31,40 @@ const getCoords = (loc) => {
   };
 };
 
+// Calculate distance between two points in km
+const calculateDistance = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+// Estimate delivery time based on distance (avg 60km/h for air freight)
+const estimateDeliveryTime = (distanceKm) => {
+  const hours = distanceKm / 60;
+  if (hours < 1) return 'Less than 1 hour';
+  if (hours < 24) return `${Math.ceil(hours)} hours`;
+  const days = Math.ceil(hours / 24);
+  return `${days} day${days > 1 ? 's' : ''}`;
+};
+
 // Custom truck icon with animation
-const createTruckIcon = (isStopped) => {
+const createTruckIcon = (isStopped, isArrived) => {
   return L.divIcon({
     className: 'custom-truck-icon',
     html: `<div style="
-      background: ${isStopped ? 'linear-gradient(135deg, #D40511, #a0040d)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)'};
+      background: ${isStopped ? 'linear-gradient(135deg, #D40511, #a0040d)' : isArrived ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)'};
       width: 44px;
       height: 44px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 15px ${isStopped ? 'rgba(212, 5, 17, 0.5)' : 'rgba(14, 165, 233, 0.5)'};
+      box-shadow: 0 4px 15px ${isStopped ? 'rgba(212, 5, 17, 0.5)' : isArrived ? 'rgba(16, 185, 129, 0.5)' : 'rgba(14, 165, 233, 0.5)'};
       border: 3px solid white;
       animation: ${isStopped ? 'none' : 'pulse 2s infinite'};
     ">
@@ -84,41 +105,71 @@ const createDestinationIcon = () => {
   });
 };
 
-// Map controller component
-const MapController = ({ bounds }) => {
+// Custom stop icon (red X)
+const createStopIcon = () => {
+  return L.divIcon({
+    className: 'custom-stop-icon',
+    html: `<div style="
+      background: linear-gradient(135deg, #D40511, #a0040d);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(212, 5, 17, 0.5);
+      border: 3px solid white;
+      animation: shake 0.5s infinite;
+    ">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+    </div>`,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+  });
+};
+
+// Map controller - auto zoom to fit bounds
+const MapController = ({ bounds, currentCoords, status, destCoords, stopCoords }) => {
   const map = useMap();
+  
   useEffect(() => {
     if (bounds) {
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 12 });
+    } else if (currentCoords) {
+      map.setView([currentCoords.lat, currentCoords.lng], 5);
     }
-  }, [bounds, map]);
+  }, [bounds, currentCoords, map]);
+
+  // Pan to destination when arrived/delivered
+  useEffect(() => {
+    if ((status === 'arrived' || status === 'delivered') && destCoords) {
+      map.flyTo([destCoords.lat, destCoords.lng], 6, { duration: 1.5 });
+    }
+  }, [status, destCoords, map]);
+
+  // Pan to stop location when stopped
+  useEffect(() => {
+    if (status === 'stopped' && stopCoords) {
+      map.flyTo([stopCoords.lat, stopCoords.lng], 7, { duration: 1.5 });
+    }
+  }, [status, stopCoords, map]);
+
   return null;
 };
 
-// Simple country boundaries GeoJSON
-const countryBoundaries = {
-  "type": "FeatureCollection",
-  "features": [
-    {"type":"Feature","properties":{"name":"United States"},"geometry":{"type":"Polygon","coordinates":[[[-125,25],[-125,49],[-66,49],[-66,25],[-125,25]]]}},
-    {"type":"Feature","properties":{"name":"Mexico"},"geometry":{"type":"Polygon","coordinates":[[[-117,14],[-117,32],[-86,32],[-86,14],[-117,14]]]}},
-    {"type":"Feature","properties":{"name":"Canada"},"geometry":{"type":"Polygon","coordinates":[[[-140,48],[-140,70],[-52,70],[-52,48],[-140,48]]]}},
-    {"type":"Feature","properties":{"name":"Brazil"},"geometry":{"type":"Polygon","coordinates":[[[-74,-34],[-74,5],[-34,5],[-34,-34],[-74,-34]]]}},
-    {"type":"Feature","properties":{"name":"United Kingdom"},"geometry":{"type":"Polygon","coordinates":[[[-8,50],[2,50],[2,59],[-8,59],[-8,50]]]}},
-    {"type":"Feature","properties":{"name":"France"},"geometry":{"type":"Polygon","coordinates":[[[-5,42],[8,42],[8,51],[-5,51],[-5,42]]]}},
-    {"type":"Feature","properties":{"name":"Germany"},"geometry":{"type":"Polygon","coordinates":[[[6,47],[15,47],[15,55],[6,55],[6,47]]]}},
-    {"type":"Feature","properties":{"name":"Nigeria"},"geometry":{"type":"Polygon","coordinates":[[[3,4],[14,4],[14,14],[3,14],[3,4]]]}},
-    {"type":"Feature","properties":{"name":"South Africa"},"geometry":{"type":"Polygon","coordinates":[[[16,-35],[33,-35],[33,-22],[16,-22],[16,-35]]]}},
-    {"type":"Feature","properties":{"name":"India"},"geometry":{"type":"Polygon","coordinates":[[[68,8],[97,8],[97,37],[68,37],[68,8]]]}},
-    {"type":"Feature","properties":{"name":"China"},"geometry":{"type":"Polygon","coordinates":[[[73,18],[135,18],[135,54],[73,54],[73,18]]]}},
-    {"type":"Feature","properties":{"name":"Russia"},"geometry":{"type":"Polygon","coordinates":[[[27,41],[180,41],[180,82],[27,82],[27,41]]]}},
-    {"type":"Feature","properties":{"name":"Australia"},"geometry":{"type":"Polygon","coordinates":[[[113,-44],[154,-44],[154,-10],[113,-10],[113,-44]]]}},
-    {"type":"Feature","properties":{"name":"Japan"},"geometry":{"type":"Polygon","coordinates":[[[129,31],[146,31],[146,46],[129,46],[129,31]]]}},
-    {"type":"Feature","properties":{"name":"Egypt"},"geometry":{"type":"Polygon","coordinates":[[[25,22],[35,22],[35,32],[25,32],[25,22]]]}},
-  ]
-};
-
 const MapTracker = ({ currentLocation, destination, origin, status, progress, stopReason }) => {
-  const [mapCenter, setMapCenter] = useState([0, 0]);
+  const [mapCenter, setMapCenter] = useState([20, 0]);
+  const [animatedPosition, setAnimatedPosition] = useState(null);
+  const [autoMovingPosition, setAutoMovingPosition] = useState(null);
+  const [showArrivedPopup, setShowArrivedPopup] = useState(false);
+  const [showStoppedPopup, setShowStoppedPopup] = useState(false);
+  const [showCountryInfo, setShowCountryInfo] = useState(false);
+  const animationRef = useRef(null);
+  const autoMoveRef = useRef(null);
 
   const currentCoords = getCoords(currentLocation);
   const destCoords = getCoords(destination);
@@ -128,19 +179,140 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
   const destName = getLocationName(destination) || 'Destination';
   const originName = getLocationName(origin) || 'Origin';
 
-  // Update center when location changes
-  useEffect(() => {
-    if (currentCoords) {
-      setMapCenter([currentCoords.lat, currentCoords.lng]);
+  // Calculate distance and estimated time
+  const distanceKm = useMemo(() => {
+    if (currentCoords && destCoords) {
+      return calculateDistance(currentCoords.lat, currentCoords.lng, destCoords.lat, destCoords.lng);
     }
-  }, [currentLocation]);
+    return 0;
+  }, [currentCoords, destCoords]);
+
+  const estimatedTime = useMemo(() => estimateDeliveryTime(distanceKm), [distanceKm]);
+
+  // Auto-move truck when in_transit (simulate movement every 5 seconds)
+  useEffect(() => {
+    if (status === 'in_transit' && currentCoords && destCoords) {
+      const startLat = currentCoords.lat;
+      const startLng = currentCoords.lng;
+      const endLat = destCoords.lat;
+      const endLng = destCoords.lng;
+      const totalDuration = 30000; // 30 seconds to reach destination for demo
+      const startTime = Date.now();
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const t = Math.min(elapsed / totalDuration, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        
+        const lat = startLat + (endLat - startLat) * ease;
+        const lng = startLng + (endLng - startLng) * ease;
+        
+        setAutoMovingPosition([lat, lng]);
+
+        if (t < 1) {
+          autoMoveRef.current = requestAnimationFrame(animate);
+        }
+      };
+
+      autoMoveRef.current = requestAnimationFrame(animate);
+    } else {
+      setAutoMovingPosition(null);
+      if (autoMoveRef.current) {
+        cancelAnimationFrame(autoMoveRef.current);
+      }
+    }
+
+    return () => {
+      if (autoMoveRef.current) {
+        cancelAnimationFrame(autoMoveRef.current);
+      }
+    };
+  }, [status, currentCoords, destCoords]);
+
+  // When status is arrived/delivered, animate truck to destination
+  useEffect(() => {
+    if ((status === 'arrived' || status === 'delivered') && currentCoords && destCoords) {
+      // Start from current position and animate to destination
+      const startLat = currentCoords.lat;
+      const startLng = currentCoords.lng;
+      const endLat = destCoords.lat;
+      const endLng = destCoords.lng;
+      const duration = 1500; // 1.5 seconds
+      const startTime = Date.now();
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        
+        // Ease out cubic
+        const ease = 1 - Math.pow(1 - t, 3);
+        
+        const lat = startLat + (endLat - startLat) * ease;
+        const lng = startLng + (endLng - startLng) * ease;
+        
+        setAnimatedPosition([lat, lng]);
+
+        if (t < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+
+      // Show arrived popup after animation
+      if (status === 'arrived') {
+        const timer = setTimeout(() => setShowArrivedPopup(true), 2000);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setAnimatedPosition(null);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [status, currentCoords, destCoords]);
+
+  // Show stopped popup when status is stopped
+  useEffect(() => {
+    if (status === 'stopped') {
+      setShowStoppedPopup(true);
+    } else {
+      setShowStoppedPopup(false);
+    }
+  }, [status]);
+
+  // Show country info when arrived
+  useEffect(() => {
+    if (status === 'arrived' || status === 'delivered') {
+      setShowCountryInfo(true);
+    } else {
+      setShowCountryInfo(false);
+    }
+  }, [status]);
+
+  // Determine truck position: auto-moving > animated > current
+  const truckPosition = useMemo(() => {
+    if (autoMovingPosition) return autoMovingPosition;
+    if (animatedPosition) return animatedPosition;
+    if (status === 'arrived' || status === 'delivered') {
+      if (destCoords) return [destCoords.lat, destCoords.lng];
+    }
+    if (currentCoords) return [currentCoords.lat, currentCoords.lng];
+    return [0, 0];
+  }, [autoMovingPosition, animatedPosition, status, currentCoords, destCoords]);
 
   // Calculate bounds for map view
   const bounds = useMemo(() => {
     if (currentCoords && destCoords) {
       return [
-        [Math.min(currentCoords.lat, destCoords.lat), Math.min(currentCoords.lng, destCoords.lng)],
-        [Math.max(currentCoords.lat, destCoords.lat), Math.max(currentCoords.lng, destCoords.lng)]
+        [Math.min(currentCoords.lat, destCoords.lat) - 2, Math.min(currentCoords.lng, destCoords.lng) - 2],
+        [Math.max(currentCoords.lat, destCoords.lat) + 2, Math.max(currentCoords.lng, destCoords.lng) + 2]
       ];
     }
     return null;
@@ -148,28 +320,28 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
 
   // Path points
   const pathPoints = useMemo(() => {
-    if (currentCoords && destCoords) {
+    if (truckPosition && destCoords) {
       return [
-        [currentCoords.lat, currentCoords.lng],
+        truckPosition,
         [destCoords.lat, destCoords.lng],
       ];
     }
     return [];
-  }, [currentCoords, destCoords]);
-
-  // Country style
-  const countryStyle = {
-    fillColor: '#e2e8f0',
-    weight: 2,
-    opacity: 0.6,
-    color: '#64748b',
-    fillOpacity: 0.2,
-    dashArray: '3',
-  };
+  }, [truckPosition, destCoords]);
 
   const isStopped = status === 'stopped';
   const isDelivered = status === 'delivered';
   const isInTransit = status === 'in_transit';
+  const isArrived = status === 'arrived';
+
+  // Get country from location name (simple extraction)
+  const getCountryFromLocation = (locName) => {
+    if (!locName) return '';
+    const parts = locName.split(',');
+    return parts[parts.length - 1]?.trim() || '';
+  };
+
+  const destCountry = getCountryFromLocation(destName);
 
   if (!currentCoords || !destCoords) {
     return (
@@ -206,8 +378,10 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             </div>
           )}
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isStopped ? 'bg-dhl-red animate-pulse' : 'bg-dhl-yellow animate-pulse'}`}></div>
-            <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">{currentName}</span>
+            <div className={`w-3 h-3 rounded-full ${isStopped ? 'bg-dhl-red animate-pulse' : isArrived || isDelivered ? 'bg-green-500' : 'bg-dhl-yellow animate-pulse'}`}></div>
+            <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-medium">
+              {isArrived || isDelivered ? destName : currentName}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-dhl-red"></div>
@@ -216,62 +390,104 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
         </div>
       </div>
 
-      <div className="h-96 relative bg-dhl-gray-100 dark:bg-dhl-gray-800 overflow-hidden">
+      {/* ETA Banner when in transit */}
+      {isInTransit && (
+        <div className="px-4 py-2 bg-dhl-yellow/10 border-b border-dhl-yellow/30 flex items-center justify-center gap-2">
+          <Clock className="w-4 h-4 text-dhl-yellow" />
+          <span className="text-sm font-bold text-dhl-black dark:text-white">
+            Estimated arrival: <span className="text-dhl-yellow">{estimatedTime}</span> 
+            <span className="text-dhl-gray-500 ml-2">({Math.round(distanceKm)} km remaining)</span>
+          </span>
+        </div>
+      )}
+      <div className="h-[500px] relative bg-dhl-gray-100 dark:bg-dhl-gray-800 overflow-hidden">
         <MapContainer
           center={mapCenter}
-          zoom={4}
+          zoom={2}
           scrollWheelZoom={true}
           className="h-full w-full"
-          style={{ background: '#f1f5f9' }}
+          style={{ background: '#e5e7eb' }}
         >
-          <MapController bounds={bounds} />
-
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          <MapController 
+            bounds={bounds} 
+            currentCoords={currentCoords} 
+            status={status} 
+            destCoords={destCoords}
+            stopCoords={isStopped ? currentCoords : null}
           />
 
-          <GeoJSON
-            data={countryBoundaries}
-            style={countryStyle}
-            interactive={false}
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
           <Polyline
             positions={pathPoints}
-            color={isStopped ? '#D40511' : '#0ea5e9'}
-            weight={4}
-            opacity={0.8}
+            color={isStopped ? '#D40511' : isArrived || isDelivered ? '#10b981' : '#0ea5e9'}
+            weight={5}
+            opacity={0.9}
             dashArray={isStopped ? '10, 10' : null}
             lineCap="round"
             lineJoin="round"
           />
 
+          {/* Truck marker */}
           <Marker
-            position={[currentCoords.lat, currentCoords.lng]}
-            icon={createTruckIcon(isStopped)}
+            position={truckPosition}
+            icon={createTruckIcon(isStopped, isArrived || isDelivered)}
           >
             <Popup>
               <div className="p-3 min-w-[200px]">
                 <p className="font-bold text-dhl-black text-lg mb-1">
-                  {isStopped ? '🛑 DELIVERY STOPPED' : '🚚 Current Location'}
+                  {isStopped ? '🛑 DELIVERY STOPPED' : isArrived ? '📦 ARRIVED AT DESTINATION' : isDelivered ? '✅ DELIVERED' : '🚚 Current Location'}
                 </p>
-                <p className="text-dhl-gray-600 mb-2">{currentName}</p>
+                <p className="text-dhl-gray-600 mb-2">
+                  {isArrived || isDelivered ? destName : currentName}
+                </p>
+                {isInTransit && (
+                  <div className="bg-dhl-yellow/10 rounded-sm p-2 mt-2">
+                    <p className="text-dhl-yellow text-sm font-bold">⏱️ ETA: {estimatedTime}</p>
+                    <p className="text-dhl-gray-500 text-xs">{Math.round(distanceKm)} km to destination</p>
+                  </div>
+                )}
                 {isStopped && stopReason && (
                   <div className="bg-dhl-red/10 border border-dhl-red rounded-sm p-2 mt-2">
                     <p className="text-dhl-red text-sm font-semibold">Stop Reason:</p>
                     <p className="text-dhl-red text-sm">{stopReason}</p>
                   </div>
                 )}
-                {isInTransit && !isStopped && (
-                  <p className="text-dhl-yellow text-sm font-medium mt-2">
-                    Moving to destination... ({Math.round((progress || 0) * 100)}%)
+                {(isArrived || isDelivered) && (
+                  <p className="text-green-600 text-sm font-bold mt-2">
+                    {isArrived ? 'Package has arrived at destination!' : 'Package successfully delivered!'}
                   </p>
                 )}
               </div>
             </Popup>
           </Marker>
 
+          {/* Stop location marker (when stopped) */}
+          {isStopped && currentCoords && (
+            <Marker
+              position={[currentCoords.lat, currentCoords.lng]}
+              icon={createStopIcon()}
+            >
+              <Popup autoPan={true} openOn={true}>
+                <div className="p-3 min-w-[220px]">
+                  <p className="font-bold text-dhl-red text-lg mb-1">🛑 DELIVERY STOPPED</p>
+                  <p className="text-dhl-gray-600 mb-2">{currentName}</p>
+                  <div className="bg-dhl-red/10 border border-dhl-red rounded-sm p-2">
+                    <p className="text-dhl-red text-sm font-semibold">Stop Reason:</p>
+                    <p className="text-dhl-red text-sm font-bold">{stopReason || 'Unknown reason'}</p>
+                  </div>
+                  <p className="text-xs text-dhl-gray-400 mt-2">
+                    Stopped at: {currentCoords.lat?.toFixed(4)}, {currentCoords.lng?.toFixed(4)}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+
+          {/* Destination marker */}
           <Marker
             position={[destCoords.lat, destCoords.lng]}
             icon={createDestinationIcon()}
@@ -294,34 +510,53 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             status === 'stopped' ? 'bg-dhl-red text-white border-dhl-red-dark animate-pulse' :
             status === 'delivered' ? 'bg-green-500 text-white border-green-600' :
             status === 'in_transit' ? 'bg-dhl-yellow text-dhl-black border-dhl-yellow-dark' :
-            status === 'arrived' ? 'bg-purple-500 text-white border-purple-600' :
+            status === 'arrived' ? 'bg-green-500 text-white border-green-600 animate-pulse' :
             'bg-dhl-yellow text-dhl-black border-dhl-yellow-dark'
           }`}>
             {status === 'stopped' && <span className="mr-2">🛑</span>}
             {status === 'in_transit' && <span className="animate-pulse mr-2">●</span>}
+            {status === 'arrived' && <span className="mr-2">📦</span>}
             {status === 'delivered' && <span className="mr-2">✅</span>}
             {status?.replace('_', ' ').toUpperCase()}
           </div>
         </div>
 
-        {/* Stop Reason Banner */}
-        {isStopped && stopReason && (
-          <div className="absolute bottom-4 left-4 right-4 z-[1000]">
-            <div className="bg-dhl-red/95 backdrop-blur-sm text-white p-4 rounded-sm shadow-2xl border-2 border-dhl-red-dark">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-sm bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold text-lg uppercase tracking-wider">DELIVERY STOPPED</p>
-                  <p className="text-white/80">{stopReason}</p>
+        {/* Stopped Popup Overlay */}
+        <AnimatePresence>
+          {isStopped && showStoppedPopup && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="absolute bottom-4 left-4 right-4 z-[1000]"
+            >
+              <div className="bg-dhl-red/95 backdrop-blur-sm text-white p-4 rounded-sm shadow-2xl border-2 border-dhl-red-dark">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-sm bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-lg uppercase tracking-wider">DELIVERY STOPPED</p>
+                    <p className="text-white/80 font-semibold">{stopReason || 'Unknown reason'}</p>
+                    <p className="text-white/60 text-xs mt-1">
+                      Location: {currentName} ({currentCoords.lat?.toFixed(4)}, {currentCoords.lng?.toFixed(4)})
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowStoppedPopup(false)}
+                    className="p-2 bg-white/20 rounded-sm hover:bg-white/30 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Progress overlay */}
         {isInTransit && !isStopped && (
@@ -339,10 +574,55 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
                   transition={{ duration: 1 }}
                 />
               </div>
-              <p className="text-xs text-dhl-gray-500 mt-2">Updates every 5 minutes</p>
+              <div className="flex justify-between mt-2">
+                <p className="text-xs text-dhl-gray-500">Updates every 5 minutes</p>
+                <p className="text-xs text-dhl-yellow font-bold">⏱️ {estimatedTime}</p>
+              </div>
             </div>
           </div>
         )}
+
+        {/* Arrived overlay with country info */}
+        <AnimatePresence>
+          {isArrived && showArrivedPopup && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="absolute top-16 left-4 right-4 z-[1000]"
+            >
+              <div className="bg-green-500/95 backdrop-blur-sm text-white p-4 rounded-sm shadow-xl border-2 border-green-600">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-sm bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-lg uppercase tracking-wider">📦 Package Arrived!</p>
+                    <p className="text-white/80 font-semibold">Your package has reached {destName}</p>
+                    {showCountryInfo && destCountry && (
+                      <p className="text-white/90 text-sm font-bold mt-1">
+                        🌍 Country: {destCountry}
+                      </p>
+                    )}
+                    <p className="text-white/60 text-xs mt-1">
+                      {destCoords.lat?.toFixed(4)}, {destCoords.lng?.toFixed(4)}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowArrivedPopup(false)}
+                    className="p-2 bg-white/20 rounded-sm hover:bg-white/30 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Delivered overlay */}
         {isDelivered && (
@@ -354,9 +634,14 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div>
-                  <p className="font-bold text-lg uppercase tracking-wider">Package Delivered!</p>
-                  <p className="text-white/80">Successfully delivered to destination</p>
+                <div className="flex-1">
+                  <p className="font-bold text-lg uppercase tracking-wider">✅ Package Delivered!</p>
+                  <p className="text-white/80">Successfully delivered to {destName}</p>
+                  {showCountryInfo && destCountry && (
+                    <p className="text-white/90 text-sm font-bold mt-1">
+                      🌍 Country: {destCountry}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -371,8 +656,10 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
           <span className="text-dhl-gray-600 dark:text-dhl-gray-400 font-medium">Origin</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-dhl-yellow"></div>
-          <span className="text-dhl-gray-600 dark:text-dhl-gray-400 font-medium">Current Location</span>
+          <div className={`w-3 h-3 rounded-full ${isArrived || isDelivered ? 'bg-green-500' : 'bg-dhl-yellow'}`}></div>
+          <span className="text-dhl-gray-600 dark:text-dhl-gray-400 font-medium">
+            {isArrived || isDelivered ? 'Arrived' : 'Current Location'}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-dhl-red"></div>
