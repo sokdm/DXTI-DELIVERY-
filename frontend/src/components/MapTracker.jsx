@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Clock } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -52,10 +53,10 @@ const estimateDeliveryTime = (distanceKm) => {
   return `${days} day${days > 1 ? 's' : ''}`;
 };
 
-// Custom truck icon with animation
-const createTruckIcon = (isStopped, isArrived) => {
+// Custom plane icon with animation
+const createPlaneIcon = (isStopped, isArrived) => {
   return L.divIcon({
-    className: 'custom-truck-icon',
+    className: 'custom-plane-icon',
     html: `<div style="
       background: ${isStopped ? 'linear-gradient(135deg, #D40511, #a0040d)' : isArrived ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)'};
       width: 44px;
@@ -68,11 +69,11 @@ const createTruckIcon = (isStopped, isArrived) => {
       border: 3px solid white;
       animation: ${isStopped ? 'none' : 'pulse 2s infinite'};
     ">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="1" y="3" width="15" height="13"></rect>
-        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-        <circle cx="5.5" cy="18.5" r="2.5"></circle>
-        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12h20"/>
+        <path d="M13 2L11 12l2 10"/>
+        <path d="M17 8l-6 4 6 4"/>
+        <path d="M7 8l6 4-6 4"/>
       </svg>
     </div>`,
     iconSize: [44, 44],
@@ -133,28 +134,31 @@ const createStopIcon = () => {
 };
 
 // Map controller - auto zoom to fit bounds
-const MapController = ({ bounds, currentCoords, status, destCoords, stopCoords }) => {
+const MapController = ({ bounds, currentCoords, status, destCoords, stopCoords, isPending }) => {
   const map = useMap();
+  const hasFitted = useRef(false);
   
   useEffect(() => {
-    if (bounds) {
+    if (bounds && !hasFitted.current) {
       map.fitBounds(bounds, { padding: [80, 80], maxZoom: 12 });
-    } else if (currentCoords) {
+      hasFitted.current = true;
+    } else if (currentCoords && !hasFitted.current) {
       map.setView([currentCoords.lat, currentCoords.lng], 5);
+      hasFitted.current = true;
     }
   }, [bounds, currentCoords, map]);
 
-  // Pan to destination when arrived/delivered
+  // Pan to destination when arrived/delivered (but don't zoom in)
   useEffect(() => {
     if ((status === 'arrived' || status === 'delivered') && destCoords) {
-      map.flyTo([destCoords.lat, destCoords.lng], 6, { duration: 1.5 });
+      map.panTo([destCoords.lat, destCoords.lng], { animate: true, duration: 1.5 });
     }
   }, [status, destCoords, map]);
 
-  // Pan to stop location when stopped
+  // Pan to stop location when stopped (but don't zoom in)
   useEffect(() => {
     if (status === 'stopped' && stopCoords) {
-      map.flyTo([stopCoords.lat, stopCoords.lng], 7, { duration: 1.5 });
+      map.panTo([stopCoords.lat, stopCoords.lng], { animate: true, duration: 1.5 });
     }
   }, [status, stopCoords, map]);
 
@@ -189,7 +193,13 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
 
   const estimatedTime = useMemo(() => estimateDeliveryTime(distanceKm), [distanceKm]);
 
-  // Auto-move truck when in_transit (simulate movement every 5 seconds)
+  const isPending = status === 'pending';
+  const isStopped = status === 'stopped';
+  const isDelivered = status === 'delivered';
+  const isInTransit = status === 'in_transit';
+  const isArrived = status === 'arrived';
+
+  // Auto-move plane when in_transit (simulate movement)
   useEffect(() => {
     if (status === 'in_transit' && currentCoords && destCoords) {
       const startLat = currentCoords.lat;
@@ -229,10 +239,9 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
     };
   }, [status, currentCoords, destCoords]);
 
-  // When status is arrived/delivered, animate truck to destination
+  // When status is arrived/delivered, animate plane to destination
   useEffect(() => {
     if ((status === 'arrived' || status === 'delivered') && currentCoords && destCoords) {
-      // Start from current position and animate to destination
       const startLat = currentCoords.lat;
       const startLng = currentCoords.lng;
       const endLat = destCoords.lat;
@@ -296,16 +305,16 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
     }
   }, [status]);
 
-  // Determine truck position: auto-moving > animated > current
-  const truckPosition = useMemo(() => {
+  // Determine plane position: auto-moving > animated > current (for pending, stay at origin/current)
+  const planePosition = useMemo(() => {
     if (autoMovingPosition) return autoMovingPosition;
     if (animatedPosition) return animatedPosition;
-    if (status === 'arrived' || status === 'delivered') {
+    if (isArrived || isDelivered) {
       if (destCoords) return [destCoords.lat, destCoords.lng];
     }
     if (currentCoords) return [currentCoords.lat, currentCoords.lng];
     return [0, 0];
-  }, [autoMovingPosition, animatedPosition, status, currentCoords, destCoords]);
+  }, [autoMovingPosition, animatedPosition, isArrived, isDelivered, currentCoords, destCoords]);
 
   // Calculate bounds for map view
   const bounds = useMemo(() => {
@@ -318,30 +327,39 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
     return null;
   }, [currentCoords, destCoords]);
 
-  // Path points
+  // Path points - only show route line when in_transit or stopped, NOT when arrived/delivered/pending
   const pathPoints = useMemo(() => {
-    if (truckPosition && destCoords) {
+    if (isArrived || isDelivered || isPending) return [];
+    if (planePosition && destCoords) {
       return [
-        truckPosition,
+        planePosition,
         [destCoords.lat, destCoords.lng],
       ];
     }
     return [];
-  }, [truckPosition, destCoords]);
+  }, [planePosition, destCoords, isArrived, isDelivered, isPending]);
 
-  const isStopped = status === 'stopped';
-  const isDelivered = status === 'delivered';
-  const isInTransit = status === 'in_transit';
-  const isArrived = status === 'arrived';
-
-  // Get country from location name (simple extraction)
+  // Get country and city from location name
   const getCountryFromLocation = (locName) => {
     if (!locName) return '';
     const parts = locName.split(',');
     return parts[parts.length - 1]?.trim() || '';
   };
 
+  const getCityFromLocation = (locName) => {
+    if (!locName) return '';
+    const parts = locName.split(',');
+    return parts[0]?.trim() || '';
+  };
+
   const destCountry = getCountryFromLocation(destName);
+  const destCity = getCityFromLocation(destName);
+
+  // Calculate display progress
+  const displayProgress = useMemo(() => {
+    if (isArrived || isDelivered) return 1; // 100% complete when arrived/delivered
+    return progress || 0;
+  }, [isArrived, isDelivered, progress]);
 
   if (!currentCoords || !destCoords) {
     return (
@@ -389,7 +407,6 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
           </div>
         </div>
       </div>
-
       {/* ETA Banner when in transit */}
       {isInTransit && (
         <div className="px-4 py-2 bg-dhl-yellow/10 border-b border-dhl-yellow/30 flex items-center justify-center gap-2">
@@ -400,6 +417,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
           </span>
         </div>
       )}
+
       <div className="h-[500px] relative bg-dhl-gray-100 dark:bg-dhl-gray-800 overflow-hidden">
         <MapContainer
           center={mapCenter}
@@ -414,6 +432,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             status={status} 
             destCoords={destCoords}
             stopCoords={isStopped ? currentCoords : null}
+            isPending={isPending}
           />
 
           <TileLayer
@@ -421,25 +440,28 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <Polyline
-            positions={pathPoints}
-            color={isStopped ? '#D40511' : isArrived || isDelivered ? '#10b981' : '#0ea5e9'}
-            weight={5}
-            opacity={0.9}
-            dashArray={isStopped ? '10, 10' : null}
-            lineCap="round"
-            lineJoin="round"
-          />
+          {/* Route line - only show when in_transit or stopped */}
+          {pathPoints.length > 0 && (
+            <Polyline
+              positions={pathPoints}
+              color={isStopped ? '#D40511' : '#0ea5e9'}
+              weight={5}
+              opacity={0.9}
+              dashArray={isStopped ? '10, 10' : null}
+              lineCap="round"
+              lineJoin="round"
+            />
+          )}
 
-          {/* Truck marker */}
+          {/* Plane marker */}
           <Marker
-            position={truckPosition}
-            icon={createTruckIcon(isStopped, isArrived || isDelivered)}
+            position={planePosition}
+            icon={createPlaneIcon(isStopped, isArrived || isDelivered)}
           >
             <Popup>
               <div className="p-3 min-w-[200px]">
                 <p className="font-bold text-dhl-black text-lg mb-1">
-                  {isStopped ? '🛑 DELIVERY STOPPED' : isArrived ? '📦 ARRIVED AT DESTINATION' : isDelivered ? '✅ DELIVERED' : '🚚 Current Location'}
+                  {isStopped ? '🛑 DELIVERY STOPPED' : isArrived ? '📦 ARRIVED AT DESTINATION' : isDelivered ? '✅ DELIVERED' : '✈️ Current Location'}
                 </p>
                 <p className="text-dhl-gray-600 mb-2">
                   {isArrived || isDelivered ? destName : currentName}
@@ -487,7 +509,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             </Marker>
           )}
 
-          {/* Destination marker */}
+          {/* Destination marker - always show country and city in popup */}
           <Marker
             position={[destCoords.lat, destCoords.lng]}
             icon={createDestinationIcon()}
@@ -495,8 +517,14 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             <Popup>
               <div className="p-3">
                 <p className="font-bold text-dhl-black text-lg mb-1">📍 Destination</p>
-                <p className="text-dhl-gray-600">{destName}</p>
-                <p className="text-xs text-dhl-gray-400 mt-1">
+                <p className="text-dhl-gray-600 font-semibold">{destName}</p>
+                {destCountry && (
+                  <p className="text-sm text-dhl-gray-500 mt-1">🌍 Country: {destCountry}</p>
+                )}
+                {destCity && (
+                  <p className="text-sm text-dhl-gray-500">🏙️ City: {destCity}</p>
+                )}
+                <p className="text-xs text-dhl-gray-400 mt-2">
                   {destCoords.lat?.toFixed(4)}, {destCoords.lng?.toFixed(4)}
                 </p>
               </div>
@@ -564,13 +592,13 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             <div className="bg-white/95 dark:bg-dhl-gray-900/95 backdrop-blur-sm rounded-sm p-4 shadow-xl border border-dhl-gray-200 dark:border-dhl-gray-700">
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-dhl-gray-600 dark:text-dhl-gray-300 font-bold uppercase tracking-wider">Delivery Progress</span>
-                <span className="font-black text-dhl-yellow text-lg">{Math.round((progress || 0) * 100)}%</span>
+                <span className="font-black text-dhl-yellow text-lg">{Math.round(displayProgress * 100)}%</span>
               </div>
               <div className="h-3 bg-dhl-gray-200 dark:bg-dhl-gray-700 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-dhl-yellow to-dhl-red rounded-full"
                   initial={{ width: 0 }}
-                  animate={{ width: `${(progress || 0) * 100}%` }}
+                  animate={{ width: `${displayProgress * 100}%` }}
                   transition={{ duration: 1 }}
                 />
               </div>
