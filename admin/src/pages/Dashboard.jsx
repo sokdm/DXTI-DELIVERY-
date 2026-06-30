@@ -1,93 +1,77 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Package, 
-  Truck, 
-  CheckCircle, 
-  AlertCircle, 
-  TrendingUp,
+import {
+  Package,
+  Truck,
+  CheckCircle,
   Clock,
-  ArrowRight
+  AlertCircle,
+  TrendingUp,
+  DollarSign,
+  MapPin,
+  Users
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// ✅ FIXED: Use correct localStorage key
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('dxt_admin_token');
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  };
+};
+
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
+  const [recentPackages, setRecentPackages] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/packages/stats/dashboard`);
-      setStats(response.data.data);
+      setLoading(true);
+      const [statsRes, packagesRes] = await Promise.all([
+        axios.get(`${API_URL}/packages/stats/dashboard`, { headers: getAuthHeaders() }),
+        axios.get(`${API_URL}/packages?limit=5`, { headers: getAuthHeaders() })
+      ]);
+
+      setStats(statsRes.data.data);
+      setRecentPackages(packagesRes.data.data);
     } catch (error) {
-      toast.error('Failed to load dashboard stats');
+      console.error('Dashboard fetch error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please log in again.');
+        localStorage.removeItem('dxt_admin_token');
+        delete axios.defaults.headers.common['Authorization'];
+        window.location.href = '/login';
+      } else {
+        toast.error('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const statCards = [
-    { 
-      title: 'Total Packages', 
-      value: stats?.total || 0, 
-      icon: Package, 
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20'
-    },
-    { 
-      title: 'In Transit', 
-      value: stats?.inTransit || 0, 
-      icon: Truck, 
-      color: 'from-indigo-500 to-indigo-600',
-      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
-    },
-    { 
-      title: 'Delivered', 
-      value: stats?.delivered || 0, 
-      icon: CheckCircle, 
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/20'
-    },
-    { 
-      title: 'Stopped', 
-      value: stats?.stopped || 0, 
-      icon: AlertCircle, 
-      color: 'from-red-500 to-red-600',
-      bgColor: 'bg-red-50 dark:bg-red-900/20'
-    },
+    { label: 'Total Packages', value: stats?.total || 0, icon: Package, color: 'bg-blue-500', trend: '+12%' },
+    { label: 'In Transit', value: stats?.inTransit || 0, icon: Truck, color: 'bg-yellow-500', trend: '+5%' },
+    { label: 'Delivered', value: stats?.delivered || 0, icon: CheckCircle, color: 'bg-green-500', trend: '+8%' },
+    { label: 'Pending', value: stats?.pending || 0, icon: Clock, color: 'bg-orange-500', trend: '+3%' },
+    { label: 'Arrived', value: stats?.arrived || 0, icon: MapPin, color: 'bg-purple-500', trend: '+2%' },
+    { label: 'Stopped', value: stats?.stopped || 0, icon: AlertCircle, color: 'bg-red-500', trend: '-1%' },
   ];
-
-  const pieData = stats ? [
-    { name: 'Pending', value: stats.pending, color: '#fbbf24' },
-    { name: 'In Transit', value: stats.inTransit, color: '#6366f1' },
-    { name: 'Arrived', value: stats.arrived, color: '#a855f7' },
-    { name: 'Delivered', value: stats.delivered, color: '#22c55e' },
-    { name: 'Stopped', value: stats.stopped, color: '#ef4444' },
-  ].filter(item => item.value > 0) : [];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-admin-primary"></div>
       </div>
     );
@@ -97,150 +81,83 @@ const Dashboard = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-8"
+      className="space-y-6"
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((card, index) => (
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+          Dashboard
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {statCards.map((stat) => (
           <motion.div
-            key={card.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="admin-card"
+            key={stat.label}
+            whileHover={{ scale: 1.02 }}
+            className="admin-card p-4"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-                  {card.title}
-                </p>
-                <p className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-                  {card.value}
-                </p>
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-lg ${stat.color} bg-opacity-10`}>
+                <stat.icon className={`w-5 h-5 ${stat.color.replace('bg-', 'text-')}`} />
               </div>
-              <div className={`p-3 rounded-xl ${card.bgColor}`}>
-                <card.icon className={`w-6 h-6 text-transparent bg-clip-text bg-gradient-to-br ${card.color}`} style={{ color: 'inherit' }} />
-              </div>
+              <span className={`text-xs font-medium ${stat.trend.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
+                {stat.trend}
+              </span>
             </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{stat.label}</p>
           </motion.div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="admin-card"
-        >
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">
-            Package Status Distribution
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex flex-wrap justify-center gap-4 mt-4">
-            {pieData.map((item) => (
-              <div key={item.name} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                <span className="text-sm text-slate-600 dark:text-slate-300">
-                  {item.name} ({item.value})
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="admin-card"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              Recent Packages
-            </h3>
-            <Link to="/packages" className="text-admin-primary hover:text-admin-secondary text-sm font-medium flex items-center gap-1">
-              View All <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          
-          <div className="space-y-4">
-            {stats?.recentPackages?.length > 0 ? (
-              stats.recentPackages.map((pkg) => (
-                <div key={pkg._id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      pkg.status === 'delivered' ? 'bg-green-100 text-green-600' :
-                      pkg.status === 'in_transit' ? 'bg-blue-100 text-blue-600' :
-                      pkg.status === 'stopped' ? 'bg-red-100 text-red-600' :
-                      'bg-yellow-100 text-yellow-600'
-                    }`}>
-                      <Package className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-white">{pkg.packageName}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">{pkg.trackingCode}</p>
-                    </div>
-                  </div>
-                  <span className={`status-pill ${
-                    pkg.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                    pkg.status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
-                    pkg.status === 'stopped' ? 'bg-red-100 text-red-700' :
-                    'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {pkg.status.replace('_', ' ')}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                No packages yet
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="admin-card"
-      >
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
-          Quick Actions
-        </h3>
-        <div className="flex flex-wrap gap-4">
-          <Link to="/create">
-            <button className="admin-btn flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Create New Package
-            </button>
-          </Link>
-          <Link to="/packages">
-            <button className="admin-btn-secondary flex items-center gap-2">
-              <Truck className="w-5 h-5" />
-              Manage Packages
-            </button>
+      <div className="admin-card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Recent Packages</h3>
+          <Link to="/packages" className="text-sm text-admin-primary hover:underline">
+            View All
           </Link>
         </div>
-      </motion.div>
+
+        {recentPackages.length === 0 ? (
+          <p className="text-slate-500 dark:text-slate-400 text-center py-8">No packages yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">Tracking Code</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">Package</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">Status</th>
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentPackages.map((pkg) => (
+                  <tr key={pkg._id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td className="py-3 px-4">
+                      <span className="font-mono font-medium text-admin-primary">{pkg.trackingCode}</span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-900 dark:text-white">{pkg.packageName}</td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        pkg.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                        pkg.status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
+                        pkg.status === 'stopped' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {pkg.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400">
+                      {new Date(pkg.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 };

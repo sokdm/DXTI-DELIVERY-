@@ -18,12 +18,11 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-// ✅ FIXED: Use env var for frontend URL instead of hardcoded localhost
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173';
 
-// ✅ ADDED: Helper to get auth headers
+// ✅ FIXED: Use correct localStorage key
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('dxt_admin_token');
   return {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -58,7 +57,8 @@ const Packages = () => {
       console.error('Fetch packages error:', error);
       if (error.response?.status === 401) {
         toast.error('Session expired. Please log in again.');
-        localStorage.removeItem('token');
+        localStorage.removeItem('dxt_admin_token');
+        delete axios.defaults.headers.common['Authorization'];
         window.location.href = '/login';
       } else {
         toast.error('Failed to fetch packages');
@@ -126,14 +126,14 @@ const Packages = () => {
   };
 
   const handlePrintReceipt = (packageId) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('dxt_admin_token');
     window.open(`${API_URL}/packages/${packageId}/receipt?token=${token}`, '_blank', 'width=900,height=1000');
   };
 
   const handleDownloadPDF = async (packageId, trackingCode) => {
     try {
       const res = await fetch(`${API_URL}/packages/${packageId}/receipt/pdf`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('dxt_admin_token')}` },
       });
       if (!res.ok) throw new Error('Download failed');
       const blob = await res.blob();
@@ -353,8 +353,6 @@ const Packages = () => {
           </table>
         </div>
       </div>
-
-      {/* Status Update Modal */}
       <AnimatePresence>
         {showStatusModal && selectedPackage && (
           <motion.div
@@ -438,7 +436,7 @@ const Packages = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Location Update Modal */}
+
       <AnimatePresence>
         {showLocationModal && selectedPackage && (
           <motion.div

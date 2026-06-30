@@ -18,7 +18,6 @@ import ReceiptModal from '../components/ReceiptModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Geocode city/country using OpenStreetMap Nominatim
 const geocodeCity = async (city, country) => {
   try {
     const query = encodeURIComponent(`${city}, ${country}`);
@@ -151,8 +150,8 @@ const CreatePackage = () => {
         data.append('packageImage', imageFile);
       }
 
-      // ✅ FIXED: Get auth token from localStorage
-      const token = localStorage.getItem('token');
+      // ✅ FIXED: Use correct localStorage key 'dxt_admin_token'
+      const token = localStorage.getItem('dxt_admin_token');
       if (!token) {
         toast.error('Session expired. Please log in again.');
         setLoading(false);
@@ -169,12 +168,12 @@ const CreatePackage = () => {
 
       toast.success('Package created successfully!');
 
-      // Fetch full package data for receipt
-      const fullPackageRes = await axios.get(`${API_URL}/packages/track/${response.data.data.trackingCode}`);
+      const fullPackageRes = await axios.get(`${API_URL}/packages/track/${response.data.data.trackingCode}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       setCreatedPackage(fullPackageRes.data.data);
       setShowReceipt(true);
 
-      // Reset form
       setFormData({
         packageName: '',
         packageDescription: '',
@@ -204,7 +203,8 @@ const CreatePackage = () => {
       console.error('Create package error:', error);
       if (error.response?.status === 401) {
         toast.error('Session expired. Please log in again.');
-        localStorage.removeItem('token');
+        localStorage.removeItem('dxt_admin_token');
+        delete axios.defaults.headers.common['Authorization'];
         navigate('/login');
       } else if (error.response?.status === 403) {
         toast.error('Access denied. Admin privileges required.');
@@ -370,6 +370,7 @@ const CreatePackage = () => {
             </div>
           </div>
         );
+
 case 4:
         return (
           <div className="space-y-6">
