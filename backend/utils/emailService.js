@@ -36,9 +36,9 @@ const getGreeting = (gender) => {
   const title = gender === 'female' ? 'Madam' : gender === 'male' ? 'Sir' : 'Sir/Madam';
   return `${timeGreeting}, ${title}`;
 };
-
+                                                                 
 const sendShipmentCreatedEmail = async (pkg) => {
-  const trackingUrl = 'https://dxti-delivery-frontend.onrender.com';
+  const trackingUrl = https://dxti-delivery.onrender.com';
   const greeting = getGreeting(pkg.receiverGender);
   const estDelivery = new Date(pkg.createdAt);
   estDelivery.setDate(estDelivery.getDate() + 7);
