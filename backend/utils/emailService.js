@@ -38,7 +38,7 @@ const getGreeting = (gender) => {
 };
                                                                  
 const sendShipmentCreatedEmail = async (pkg) => {
-  const trackingUrl = https://dxti-delivery.onrender.com';
+  const trackingUrl = 'https://dxti-delivery.onrender.com';
   const greeting = getGreeting(pkg.receiverGender);
   const estDelivery = new Date(pkg.createdAt);
   estDelivery.setDate(estDelivery.getDate() + 7);
