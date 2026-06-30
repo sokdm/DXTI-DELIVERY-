@@ -22,8 +22,7 @@ exports.createPackage = async (req, res) => {
     const deliveryPrice = parseFloat(data.deliveryPrice);
 
     if (isNaN(packageWeight) || packageWeight <= 0) {
-      // Clean up uploaded file if validation fails
-      if (req.file.filename) {
+      if (req.file && req.file.filename) {
         try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
       }
       return res.status(400).json({
@@ -33,7 +32,7 @@ exports.createPackage = async (req, res) => {
     }
 
     if (isNaN(deliveryPrice) || deliveryPrice < 0) {
-      if (req.file.filename) {
+      if (req.file && req.file.filename) {
         try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
       }
       return res.status(400).json({
@@ -47,7 +46,7 @@ exports.createPackage = async (req, res) => {
       currentLocation = JSON.parse(data.currentLocation);
       destinationLocation = JSON.parse(data.destinationLocation);
     } catch (e) {
-      if (req.file.filename) {
+      if (req.file && req.file.filename) {
         try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
       }
       return res.status(400).json({
@@ -81,13 +80,10 @@ exports.createPackage = async (req, res) => {
       status: 'pending',
     });
 
-    // Send email to receiver (don't block on failure)
-    try {
-      await sendShipmentCreatedEmail(package);
-      console.log('✅ Shipment creation email sent to', package.receiverEmail);
-    } catch (emailErr) {
-      console.error('❌ Failed to send email:', emailErr.message);
-    }
+    // ✅ FIXED: Fire-and-forget email — don't block on failure
+    sendShipmentCreatedEmail(package)
+      .then(() => console.log('✅ Shipment creation email sent to', package.receiverEmail))
+      .catch(emailErr => console.error('❌ Failed to send email:', emailErr.message));
 
     res.status(201).json({
       success: true,
@@ -225,14 +221,11 @@ exports.updateStatus = async (req, res) => {
       { new: true }
     );
 
-    // Send status update email if status changed
+    // ✅ FIXED: Fire-and-forget email — don't block on failure
     if (oldStatus !== status) {
-      try {
-        await sendStatusUpdateEmail(package, oldStatus);
-        console.log('✅ Status update email sent to', package.receiverEmail);
-      } catch (emailErr) {
-        console.error('❌ Failed to send status email:', emailErr.message);
-      }
+      sendStatusUpdateEmail(package, oldStatus)
+        .then(() => console.log('✅ Status update email sent to', package.receiverEmail))
+        .catch(emailErr => console.error('❌ Failed to send status email:', emailErr.message));
     }
 
     res.status(200).json({
@@ -315,7 +308,6 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// NEW: Get receipt HTML for printing
 exports.getReceipt = async (req, res) => {
   try {
     const { id } = req.params;
@@ -340,7 +332,6 @@ exports.getReceipt = async (req, res) => {
   }
 };
 
-// NEW: Download receipt PDF
 exports.downloadReceiptPDF = async (req, res) => {
   try {
     const { id } = req.params;
@@ -366,7 +357,6 @@ exports.downloadReceiptPDF = async (req, res) => {
   }
 };
 
-// NEW: Update package location manually
 exports.updateLocation = async (req, res) => {
   try {
     const { id } = req.params;
