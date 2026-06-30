@@ -18,6 +18,17 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// ✅ FIXED: Use env var for frontend URL instead of hardcoded localhost
+const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173';
+
+// ✅ ADDED: Helper to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  };
+};
 
 const Packages = () => {
   const [packages, setPackages] = useState([]);
@@ -39,11 +50,19 @@ const Packages = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/packages`, {
+        headers: getAuthHeaders(),
         params: { status: statusFilter }
       });
       setPackages(response.data.data);
     } catch (error) {
-      toast.error('Failed to fetch packages');
+      console.error('Fetch packages error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please log in again.');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      } else {
+        toast.error('Failed to fetch packages');
+      }
     } finally {
       setLoading(false);
     }
@@ -53,11 +72,14 @@ const Packages = () => {
     if (!window.confirm('Are you sure you want to delete this package?')) return;
 
     try {
-      await axios.delete(`${API_URL}/packages/${id}`);
+      await axios.delete(`${API_URL}/packages/${id}`, {
+        headers: getAuthHeaders()
+      });
       toast.success('Package deleted successfully');
       fetchPackages();
     } catch (error) {
-      toast.error('Failed to delete package');
+      console.error('Delete error:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete package');
     }
   };
 
@@ -68,7 +90,9 @@ const Packages = () => {
         data.stopReason = stopReason;
       }
 
-      await axios.patch(`${API_URL}/packages/${selectedPackage._id}/status`, data);
+      await axios.patch(`${API_URL}/packages/${selectedPackage._id}/status`, data, {
+        headers: getAuthHeaders()
+      });
       toast.success('Status updated successfully');
       setShowStatusModal(false);
       setSelectedPackage(null);
@@ -76,7 +100,8 @@ const Packages = () => {
       setStopReason('');
       fetchPackages();
     } catch (error) {
-      toast.error('Failed to update status');
+      console.error('Status update error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -86,6 +111,8 @@ const Packages = () => {
         lat: parseFloat(locationForm.lat),
         lng: parseFloat(locationForm.lng),
         locationName: locationForm.locationName,
+      }, {
+        headers: getAuthHeaders()
       });
       toast.success('Location updated successfully');
       setShowLocationModal(false);
@@ -93,20 +120,22 @@ const Packages = () => {
       setLocationForm({ lat: '', lng: '', locationName: '' });
       fetchPackages();
     } catch (error) {
-      toast.error('Failed to update location');
+      console.error('Location update error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update location');
     }
   };
 
   const handlePrintReceipt = (packageId) => {
-    window.open(`${API_URL}/packages/${packageId}/receipt`, '_blank', 'width=900,height=1000');
+    const token = localStorage.getItem('token');
+    window.open(`${API_URL}/packages/${packageId}/receipt?token=${token}`, '_blank', 'width=900,height=1000');
   };
 
   const handleDownloadPDF = async (packageId, trackingCode) => {
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/packages/${packageId}/receipt/pdf`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
+      if (!res.ok) throw new Error('Download failed');
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -117,6 +146,7 @@ const Packages = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
+      console.error('PDF download error:', err);
       toast.error('Failed to download PDF');
     }
   };
@@ -280,7 +310,7 @@ const Packages = () => {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => window.open(`http://localhost:5173/track/${pkg.trackingCode}`, '_blank')}
+                          onClick={() => window.open(`${FRONTEND_URL}/track/${pkg.trackingCode}`, '_blank')}
                           className="p-2 text-slate-400 hover:text-admin-primary transition-colors"
                           title="View"
                         >
@@ -408,7 +438,6 @@ const Packages = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
       {/* Location Update Modal */}
       <AnimatePresence>
         {showLocationModal && selectedPackage && (

@@ -151,8 +151,20 @@ const CreatePackage = () => {
         data.append('packageImage', imageFile);
       }
 
+      // ✅ FIXED: Get auth token from localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Session expired. Please log in again.');
+        setLoading(false);
+        navigate('/login');
+        return;
+      }
+
       const response = await axios.post(`${API_URL}/packages/create`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       toast.success('Package created successfully!');
@@ -189,7 +201,16 @@ const CreatePackage = () => {
       setStep(1);
 
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create package');
+      console.error('Create package error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please log in again.');
+        localStorage.removeItem('token');
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        toast.error('Access denied. Admin privileges required.');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to create package');
+      }
     } finally {
       setLoading(false);
     }
@@ -349,8 +370,7 @@ const CreatePackage = () => {
             </div>
           </div>
         );
-
-      case 4:
+case 4:
         return (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -388,7 +408,8 @@ const CreatePackage = () => {
                 We'll auto-detect exact coordinates from OpenStreetMap
               </p>
             </div>
-       <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
               <h4 className="font-medium text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Globe className="w-4 h-4 text-green-500" />
                 Destination Location
