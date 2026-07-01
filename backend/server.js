@@ -26,7 +26,6 @@ app.use(limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ FIXED: CORS allows all three deployed origins + localhost dev
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   process.env.ADMIN_URL || 'http://localhost:5174',
@@ -48,7 +47,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// ✅ ADDED: Request logging for debugging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} | ${req.method} ${req.path} | Origin: ${req.headers.origin || 'none'} | Auth: ${req.headers.authorization ? 'YES' : 'NO'}`);
   next();
@@ -65,34 +63,19 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.use(errorHandler);
-
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found',
+// DEBUG ENDPOINTS — placed BEFORE 404 handler
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    cloudinary_name_set: !!process.env.CLOUDINARY_CLOUD_NAME,
+    cloudinary_key_set: !!process.env.CLOUDINARY_API_KEY,
+    cloudinary_secret_set: !!process.env.CLOUDINARY_API_SECRET,
+    mongodb_set: !!process.env.MONGODB_URI,
+    jwt_set: !!process.env.JWT_SECRET,
+    frontend_url: process.env.FRONTEND_URL,
+    admin_url: process.env.ADMIN_URL,
   });
 });
 
-const PORT = process.env.PORT || 5000;
-
-const server = app.listen(PORT, () => {
-  console.log(`🚀 DXTI Delivery Server running on port ${PORT}`);
-  console.log(`📦 API URL: http://localhost:${PORT}/api`);
-  console.log(`🌐 Allowed origins:`, allowedOrigins);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err.message);
-  server.close(() => process.exit(1));
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err.message);
-  process.exit(1);
-});
-
-// DEBUG: Test endpoints for phone troubleshooting
 app.post('/api/debug/create-package', async (req, res) => {
   try {
     console.log('🔍 DEBUG: Testing package creation without auth/upload/email');
@@ -125,16 +108,34 @@ app.post('/api/debug/create-package', async (req, res) => {
     res.json({ success: true, trackingCode: testPackage.trackingCode });
   } catch (err) {
     console.error('DEBUG ERROR:', err);
-    res.status(500).json({ success: false, error: err.message, stack: err.stack });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.get('/api/debug/env', (req, res) => {
-  res.json({
-    cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
-    mongodb: !!process.env.MONGODB_URI,
-    jwt: !!process.env.JWT_SECRET,
-    frontend: process.env.FRONTEND_URL,
-    admin: process.env.ADMIN_URL,
+// 404 handler — MUST be last
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
   });
+});
+
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+const server = app.listen(PORT, () => {
+  console.log(`🚀 DXTI Delivery Server running on port ${PORT}`);
+  console.log(`📦 API URL: http://localhost:${PORT}/api`);
+  console.log(`🌐 Allowed origins:`, allowedOrigins);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err.message);
+  server.close(() => process.exit(1));
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err.message);
+  process.exit(1);
 });
