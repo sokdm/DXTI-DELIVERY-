@@ -91,3 +91,50 @@ process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err.message);
   process.exit(1);
 });
+
+// DEBUG: Test endpoints for phone troubleshooting
+app.post('/api/debug/create-package', async (req, res) => {
+  try {
+    console.log('🔍 DEBUG: Testing package creation without auth/upload/email');
+    const Package = require('./models/Package');
+    
+    const testPackage = await Package.create({
+      packageName: 'TEST PACKAGE',
+      packageDescription: 'Debug test',
+      packageWeight: 1.0,
+      packageImage: 'https://via.placeholder.com/150',
+      senderName: 'Test Sender',
+      senderPhone: '1234567890',
+      senderEmail: 'test@test.com',
+      senderAddress: 'Test Address',
+      senderCountry: 'Test Country',
+      senderCity: 'Test City',
+      receiverName: 'Test Receiver',
+      receiverPhone: '0987654321',
+      receiverEmail: 'receiver@test.com',
+      receiverAddress: 'Receiver Address',
+      receiverCountry: 'Receiver Country',
+      receiverCity: 'Receiver City',
+      receiverGender: 'male',
+      deliveryPrice: 10.00,
+      currentLocation: { lat: 0, lng: 0, locationName: 'Test Current' },
+      destinationLocation: { lat: 1, lng: 1, locationName: 'Test Dest' },
+      status: 'pending',
+    });
+    
+    res.json({ success: true, trackingCode: testPackage.trackingCode });
+  } catch (err) {
+    console.error('DEBUG ERROR:', err);
+    res.status(500).json({ success: false, error: err.message, stack: err.stack });
+  }
+});
+
+app.get('/api/debug/env', (req, res) => {
+  res.json({
+    cloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
+    mongodb: !!process.env.MONGODB_URI,
+    jwt: !!process.env.JWT_SECRET,
+    frontend: process.env.FRONTEND_URL,
+    admin: process.env.ADMIN_URL,
+  });
+});
