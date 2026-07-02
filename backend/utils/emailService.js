@@ -1,7 +1,7 @@
-const axios = require('axios');
+const sgMail = require('@sendgrid/mail');
 
 const EMAIL_FROM = process.env.EMAIL_FROM || 'dhld5736@gmail.com';
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 
 // Helper: Get time-based greeting
 const getGreeting = (gender) => {
@@ -20,42 +20,37 @@ const sendEmail = async (to, subject, html) => {
   console.log('📧 sendEmail called');
   console.log('   To:', to);
   console.log('   From:', EMAIL_FROM);
-  console.log('   BREVO_API_KEY set:', !!BREVO_API_KEY);
-  console.log('   BREVO_API_KEY length:', BREVO_API_KEY ? BREVO_API_KEY.length : 0);
+  console.log('   SENDGRID_API_KEY set:', !!SENDGRID_API_KEY);
+  console.log('   SENDGRID_API_KEY length:', SENDGRID_API_KEY ? SENDGRID_API_KEY.length : 0);
 
-  if (!BREVO_API_KEY) {
-    console.log('⚠️ BREVO_API_KEY not set, skipping email');
+  if (!SENDGRID_API_KEY) {
+    console.log('⚠️ SENDGRID_API_KEY not set, skipping email');
     return;
   }
 
+  sgMail.setApiKey(SENDGRID_API_KEY);
+
+  const msg = {
+    to,
+    from: { name: 'DHL Express Delivery', email: EMAIL_FROM },
+    replyTo: EMAIL_FROM,
+    subject,
+    html,
+  };
+
   try {
-    console.log('🚀 Sending Brevo API request...');
-    const response = await axios.post(
-      'https://api.brevo.com/v3/smtp/email',
-      {
-        sender: { name: 'DHL Express Delivery', email: EMAIL_FROM },
-        to: [{ email: to }],
-        replyTo: { email: EMAIL_FROM },
-        subject,
-        htmlContent: html,
-      },
-      {
-        headers: {
-          'api-key': BREVO_API_KEY,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    console.log('🚀 Sending SendGrid API request...');
+    const response = await sgMail.send(msg);
     console.log('✅ Email sent to', to);
-    console.log('   MessageId:', response.data.messageId);
-    console.log('   Full response:', JSON.stringify(response.data, null, 2));
+    console.log('   Status:', response[0].statusCode);
+    console.log('   Headers:', JSON.stringify(response[0].headers, null, 2));
   } catch (error) {
-    console.error('❌ BREVO EMAIL FAILED');
-    console.error('   Status:', error.response?.status);
-    console.error('   StatusText:', error.response?.statusText);
-    console.error('   Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('❌ SENDGRID EMAIL FAILED');
+    console.error('   Status:', error.code);
     console.error('   Message:', error.message);
-    console.error('   Code:', error.code);
+    if (error.response) {
+      console.error('   Body:', JSON.stringify(error.response.body, null, 2));
+    }
     throw error;
   }
 };
