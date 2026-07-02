@@ -7,7 +7,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import TrackingResult from '../components/TrackingResult';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// ✅ HARDCODED: Use deployed backend URL directly
+const API_URL = 'https://dxti-delivery-unhl.onrender.com/api';
 
 const Track = () => {
   const { trackingCode: urlTrackingCode } = useParams();
@@ -23,19 +24,10 @@ const Track = () => {
     setError(null);
     setPackageData(null);
 
-    console.log('🔍 Tracking package:', code.trim());
-    console.log('📡 API URL:', `${API_URL}/packages/track/${code.trim()}`);
-
     try {
       const response = await axios.get(`${API_URL}/packages/track/${code.trim()}`);
-      console.log('✅ Track response:', response.data);
       if (response.data.success) setPackageData(response.data.data);
     } catch (err) {
-      console.error('❌ Track error:', err);
-      console.error('Status:', err.response?.status);
-      console.error('Message:', err.response?.data?.message);
-      console.error('Full response:', err.response?.data);
-
       if (err.response?.status === 404) {
         setError('Package not found. Please check the tracking code and try again.');
       } else if (err.response?.status === 0 || !err.response) {
