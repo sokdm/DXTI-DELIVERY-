@@ -1,13 +1,7 @@
-const { Resend } = require('resend');
+const axios = require('axios');
 
-const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-const REPLY_TO = process.env.REPLY_TO || EMAIL_FROM;
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-let resend;
-if (RESEND_API_KEY) {
-  resend = new Resend(RESEND_API_KEY);
-}
+const EMAIL_FROM = process.env.EMAIL_FROM || 'dhld5736@gmail.com';
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
 
 // Helper: Get time-based greeting
 const getGreeting = (gender) => {
@@ -22,12 +16,52 @@ const getGreeting = (gender) => {
   return `${timeGreeting}, ${title}`;
 };
 
-const sendShipmentCreatedEmail = async (pkg) => {
-  if (!resend) {
-    console.log('⚠️ RESEND_API_KEY not set, skipping email');
+const sendEmail = async (to, subject, html) => {
+  console.log('📧 sendEmail called');
+  console.log('   To:', to);
+  console.log('   From:', EMAIL_FROM);
+  console.log('   BREVO_API_KEY set:', !!BREVO_API_KEY);
+  console.log('   BREVO_API_KEY length:', BREVO_API_KEY ? BREVO_API_KEY.length : 0);
+
+  if (!BREVO_API_KEY) {
+    console.log('⚠️ BREVO_API_KEY not set, skipping email');
     return;
   }
 
+  try {
+    console.log('🚀 Sending Brevo API request...');
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: { name: 'DHL Express Delivery', email: EMAIL_FROM },
+        to: [{ email: to }],
+        replyTo: { email: EMAIL_FROM },
+        subject,
+        htmlContent: html,
+      },
+      {
+        headers: {
+          'api-key': BREVO_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    console.log('✅ Email sent to', to);
+    console.log('   MessageId:', response.data.messageId);
+    console.log('   Full response:', JSON.stringify(response.data, null, 2));
+  } catch (error) {
+    console.error('❌ BREVO EMAIL FAILED');
+    console.error('   Status:', error.response?.status);
+    console.error('   StatusText:', error.response?.statusText);
+    console.error('   Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('   Message:', error.message);
+    console.error('   Code:', error.code);
+    throw error;
+  }
+};
+
+const sendShipmentCreatedEmail = async (pkg) => {
+  console.log('📦 sendShipmentCreatedEmail called for:', pkg.receiverEmail);
   const trackingUrl = process.env.FRONTEND_URL || 'https://dxti-delivery.onrender.com';
   const greeting = getGreeting(pkg.receiverGender);
 
@@ -105,32 +139,11 @@ const sendShipmentCreatedEmail = async (pkg) => {
 </body>
 </html>`;
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: `DHL Express <${EMAIL_FROM}>`,
-      to: [pkg.receiverEmail],
-      reply_to: REPLY_TO,
-      subject: `📦 Your DHL Shipment Has Been Created — ${pkg.trackingCode}`,
-      html,
-    });
-
-    if (error) {
-      console.error('❌ Resend error:', error);
-      throw new Error(error.message);
-    }
-    console.log('✅ Shipment email sent to', pkg.receiverEmail, 'ID:', data.id);
-  } catch (err) {
-    console.error('❌ Email send failed:', err.message);
-    throw err;
-  }
+  await sendEmail(pkg.receiverEmail, `📦 Your DHL Shipment Has Been Created — ${pkg.trackingCode}`, html);
 };
 
 const sendStatusUpdateEmail = async (pkg, oldStatus) => {
-  if (!resend) {
-    console.log('⚠️ RESEND_API_KEY not set, skipping status email');
-    return;
-  }
-
+  console.log('📦 sendStatusUpdateEmail called for:', pkg.receiverEmail);
   const trackingUrl = process.env.FRONTEND_URL || 'https://dxti-delivery.onrender.com';
   const greeting = getGreeting(pkg.receiverGender);
   const statusIcons = {
@@ -199,24 +212,7 @@ const sendStatusUpdateEmail = async (pkg, oldStatus) => {
 </body>
 </html>`;
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: `DHL Express <${EMAIL_FROM}>`,
-      to: [pkg.receiverEmail],
-      reply_to: REPLY_TO,
-      subject: `${icon} DHL Shipment Update — ${pkg.status.replace('_',' ').toUpperCase()} | ${pkg.trackingCode}`,
-      html,
-    });
-
-    if (error) {
-      console.error('❌ Resend error:', error);
-      throw new Error(error.message);
-    }
-    console.log('✅ Status update email sent to', pkg.receiverEmail, 'ID:', data.id);
-  } catch (err) {
-    console.error('❌ Email send failed:', err.message);
-    throw err;
-  }
+  await sendEmail(pkg.receiverEmail, `${icon} DHL Shipment Update — ${pkg.status.replace('_',' ').toUpperCase()} | ${pkg.trackingCode}`, html);
 };
 
 module.exports = { sendShipmentCreatedEmail, sendStatusUpdateEmail };

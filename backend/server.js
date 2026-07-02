@@ -31,6 +31,7 @@ const allowedOrigins = [
   process.env.ADMIN_URL || 'http://localhost:5174',
   'https://dxti-delivery.onrender.com',
   'https://dxti-delivery-admin-t68p.onrender.com',
+  'https://dxti-delivery-unhl.onrender.com',
 ].filter(Boolean);
 
 app.use(cors({
@@ -63,7 +64,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// DEBUG ENDPOINTS — placed BEFORE 404 handler
+// DEBUG ENDPOINTS
 app.get('/api/debug/env', (req, res) => {
   res.json({
     cloudinary_name_set: !!process.env.CLOUDINARY_CLOUD_NAME,
@@ -73,6 +74,9 @@ app.get('/api/debug/env', (req, res) => {
     jwt_set: !!process.env.JWT_SECRET,
     frontend_url: process.env.FRONTEND_URL,
     admin_url: process.env.ADMIN_URL,
+    brevo_key_set: !!process.env.BREVO_API_KEY,
+    brevo_key_length: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.length : 0,
+    email_from: process.env.EMAIL_FROM,
   });
 });
 
@@ -80,7 +84,7 @@ app.post('/api/debug/create-package', async (req, res) => {
   try {
     console.log('🔍 DEBUG: Testing package creation without auth/upload/email');
     const Package = require('./models/Package');
-    
+
     const testPackage = await Package.create({
       packageName: 'TEST PACKAGE',
       packageDescription: 'Debug test',
@@ -104,11 +108,38 @@ app.post('/api/debug/create-package', async (req, res) => {
       destinationLocation: { lat: 1, lng: 1, locationName: 'Test Dest' },
       status: 'pending',
     });
-    
+
     res.json({ success: true, trackingCode: testPackage.trackingCode });
   } catch (err) {
     console.error('DEBUG ERROR:', err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DEBUG: Test email endpoint
+app.post('/api/debug/test-email', async (req, res) => {
+  try {
+    const { sendShipmentCreatedEmail } = require('./utils/emailService');
+    const testPkg = {
+      trackingCode: 'DXT-TEST123',
+      receiverName: 'Test User',
+      receiverEmail: req.body.email || 'wsdmpresh@gmail.com',
+      receiverGender: 'male',
+      senderName: 'Test Sender',
+      senderCountry: 'USA',
+      deliveryPrice: 99.99,
+    };
+    
+    console.log('🔍 DEBUG: Testing Brevo email to', testPkg.receiverEmail);
+    await sendShipmentCreatedEmail(testPkg);
+    res.json({ success: true, message: 'Email API call completed (check logs + inbox)' });
+  } catch (err) {
+    console.error('DEBUG EMAIL ERROR:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message, 
+      details: err.response?.data || 'No response data' 
+    });
   }
 });
 

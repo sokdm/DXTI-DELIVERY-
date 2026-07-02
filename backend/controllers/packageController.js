@@ -80,10 +80,16 @@ exports.createPackage = async (req, res) => {
       status: 'pending',
     });
 
-    // ✅ FIXED: Fire-and-forget email — don't block on failure
+    // Fire-and-forget email with detailed logging
+    console.log('📧 About to send shipment creation email...');
     sendShipmentCreatedEmail(package)
-      .then(() => console.log('✅ Shipment creation email sent to', package.receiverEmail))
-      .catch(emailErr => console.error('❌ Failed to send email:', emailErr.message));
+      .then(() => {
+        console.log('✅ Shipment creation email completed for', package.receiverEmail);
+      })
+      .catch(emailErr => {
+        console.error('❌ Failed to send email:', emailErr.message);
+        console.error('Full error:', emailErr.response?.data || 'No response data');
+      });
 
     res.status(201).json({
       success: true,
@@ -221,11 +227,17 @@ exports.updateStatus = async (req, res) => {
       { new: true }
     );
 
-    // ✅ FIXED: Fire-and-forget email — don't block on failure
+    // Fire-and-forget email with detailed logging
     if (oldStatus !== status) {
+      console.log('📧 About to send status update email...');
       sendStatusUpdateEmail(package, oldStatus)
-        .then(() => console.log('✅ Status update email sent to', package.receiverEmail))
-        .catch(emailErr => console.error('❌ Failed to send status email:', emailErr.message));
+        .then(() => {
+          console.log('✅ Status update email completed for', package.receiverEmail);
+        })
+        .catch(emailErr => {
+          console.error('❌ Failed to send status email:', emailErr.message);
+          console.error('Full error:', emailErr.response?.data || 'No response data');
+        });
     }
 
     res.status(200).json({
