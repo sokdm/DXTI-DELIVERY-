@@ -1,6 +1,7 @@
 const { Resend } = require('resend');
 
 const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+const REPLY_TO = process.env.REPLY_TO || EMAIL_FROM;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 let resend;
@@ -56,6 +57,8 @@ const sendShipmentCreatedEmail = async (pkg) => {
     .tracking-code { color:#1f2937; font-size:32px; font-weight:900; letter-spacing:4px; font-family:'Courier New',monospace; }
     .amount-value { font-size:36px; font-weight:900; color:#D40511; }
     .btn { display:inline-block; background:linear-gradient(135deg,#D40511,#BA0410); color:#fff; text-decoration:none; padding:18px 55px; border-radius:50px; font-size:17px; font-weight:800; margin:20px 0; }
+    .reply-box { background:#e7f3ff; border-radius:8px; padding:12px; margin-top:15px; border:1px solid #b3d9ff; text-align:center; }
+    .reply-box .text { color:#004085; font-size:13px; font-weight:600; }
     .footer { background:#f8f9fa; padding:30px; text-align:center; border-top:2px solid #dee2e6; }
     .footer-brand { color:#D40511; font-size:20px; font-weight:900; letter-spacing:4px; }
   </style>
@@ -88,6 +91,9 @@ const sendShipmentCreatedEmail = async (pkg) => {
       <div style="text-align:center;">
         <a href="${trackingUrl}/track/${pkg.trackingCode}" class="btn">Track Your Shipment</a>
       </div>
+      <div class="reply-box">
+        <div class="text">📧 <strong>Reply to this email</strong> for payment arrangements and delivery confirmation.</div>
+      </div>
     </div>
     <div class="footer">
       <div class="footer-brand">DHL</div>
@@ -103,6 +109,7 @@ const sendShipmentCreatedEmail = async (pkg) => {
     const { data, error } = await resend.emails.send({
       from: `DHL Express <${EMAIL_FROM}>`,
       to: [pkg.receiverEmail],
+      reply_to: REPLY_TO,
       subject: `📦 Your DHL Shipment Has Been Created — ${pkg.trackingCode}`,
       html,
     });
@@ -157,6 +164,8 @@ const sendStatusUpdateEmail = async (pkg, oldStatus) => {
     .status-title { color:#1f2937; font-size:22px; font-weight:900; }
     .tracking-code { color:#1f2937; font-size:24px; font-weight:900; letter-spacing:3px; font-family:'Courier New',monospace; }
     .btn { display:inline-block; background:linear-gradient(135deg,#D40511,#BA0410); color:#fff; text-decoration:none; padding:16px 50px; border-radius:50px; font-size:16px; font-weight:800; margin:15px 0; }
+    .reply-box { background:#e7f3ff; border-radius:8px; padding:12px; margin-top:15px; border:1px solid #b3d9ff; text-align:center; }
+    .reply-box .text { color:#004085; font-size:13px; font-weight:600; }
     .footer { background:#f8f9fa; padding:30px; text-align:center; }
   </style>
 </head>
@@ -178,6 +187,9 @@ const sendStatusUpdateEmail = async (pkg, oldStatus) => {
       <div style="text-align:center;">
         <a href="${trackingUrl}/track/${pkg.trackingCode}" class="btn">Track Your Shipment</a>
       </div>
+      <div class="reply-box">
+        <div class="text">📧 <strong>Reply to this email</strong> for any questions about your shipment.</div>
+      </div>
     </div>
     <div class="footer">
       <div style="color:#D40511; font-size:20px; font-weight:900;">DHL</div>
@@ -191,6 +203,7 @@ const sendStatusUpdateEmail = async (pkg, oldStatus) => {
     const { data, error } = await resend.emails.send({
       from: `DHL Express <${EMAIL_FROM}>`,
       to: [pkg.receiverEmail],
+      reply_to: REPLY_TO,
       subject: `${icon} DHL Shipment Update — ${pkg.status.replace('_',' ').toUpperCase()} | ${pkg.trackingCode}`,
       html,
     });
