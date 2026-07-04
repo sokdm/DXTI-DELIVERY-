@@ -16,6 +16,37 @@ const getGreeting = (gender) => {
   return `${timeGreeting}, ${title}`;
 };
 
+// Timeline configuration
+const getTimeline = (currentStatus) => {
+  const steps = [
+    { key: 'created', label: 'Shipment Created', icon: '✓' },
+    { key: 'pending', label: 'Payment Pending', icon: '●' },
+    { key: 'in_transit', label: 'In Transit', icon: '○' },
+    { key: 'arrived', label: 'Arrived at Destination', icon: '○' },
+    { key: 'delivered', label: 'Delivered', icon: '○' },
+  ];
+  
+  const statusMap = {
+    pending: 1,
+    in_transit: 2,
+    arrived: 3,
+    delivered: 4,
+    stopped: -1,
+  };
+  
+  const currentIndex = statusMap[currentStatus] || 0;
+  
+  return steps.map((step, index) => {
+    if (index < currentIndex) {
+      return { ...step, state: 'completed', icon: '✓' };
+    } else if (index === currentIndex) {
+      return { ...step, state: 'current', icon: '●' };
+    } else {
+      return { ...step, state: 'pending', icon: '○' };
+    }
+  });
+};
+
 const sendEmail = async (to, subject, html) => {
   console.log('📧 sendEmail called');
   console.log('   To:', to);
@@ -55,8 +86,515 @@ const sendEmail = async (to, subject, html) => {
   }
 };
 
+// Template variables for shipment creation email
+const buildShipmentTemplate = (vars) => {
+  const {
+    greeting,
+    receiverName,
+    trackingCode,
+    packageName,
+    packageWeight,
+    deliveryPrice,
+    senderName,
+    senderEmail,
+    senderPhone,
+    senderAddress,
+    senderCity,
+    senderCountry,
+    receiverEmail,
+    receiverPhone,
+    receiverAddress,
+    receiverCity,
+    receiverCountry,
+    createdDate,
+    createdTime,
+    trackingUrl,
+    receiptId,
+  } = vars;
+
+  const timeline = getTimeline('pending');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your DHL Shipment - ${trackingCode}</title>
+  <style>
+    /* Reset */
+    body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    
+    /* Base */
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #333333; -webkit-font-smoothing: antialiased; }
+    
+    /* Container */
+    .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+    
+    /* Header */
+    .header { background-color: #D40511; padding: 30px 40px; text-align: left; }
+    .header-content { display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: 4px; }
+    .logo-sub { color: #FFCC00; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+    .header-badge { background-color: #FFCC00; color: #D40511; padding: 6px 14px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+    
+    /* Hero */
+    .hero { background-color: #fafafa; padding: 40px; text-align: center; border-bottom: 3px solid #FFCC00; }
+    .hero-icon { font-size: 48px; margin-bottom: 15px; }
+    .hero-title { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
+    .hero-text { font-size: 14px; color: #666666; max-width: 400px; margin: 0 auto; line-height: 1.6; }
+    
+    /* Tracking Card */
+    .tracking-card { background-color: #ffffff; margin: -20px 30px 0; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; position: relative; z-index: 2; border: 2px solid #FFCC00; }
+    .tracking-label { font-size: 11px; color: #888888; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+    .tracking-code { font-size: 28px; font-weight: 900; color: #1a1a1a; letter-spacing: 3px; font-family: 'Courier New', monospace; margin-bottom: 8px; }
+    .tracking-hint { font-size: 12px; color: #888888; }
+    
+    /* Timeline */
+    .timeline-section { padding: 40px 30px 20px; }
+    .timeline-title { font-size: 12px; color: #888888; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; text-align: center; }
+    .timeline { display: flex; justify-content: space-between; align-items: flex-start; position: relative; }
+    .timeline::before { content: ''; position: absolute; top: 14px; left: 10%; right: 10%; height: 2px; background-color: #e5e5e5; z-index: 0; }
+    .timeline-step { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; flex: 1; }
+    .timeline-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+    .timeline-dot.completed { background-color: #10b981; color: #ffffff; }
+    .timeline-dot.current { background-color: #D40511; color: #ffffff; box-shadow: 0 0 0 4px rgba(212,5,17,0.15); }
+    .timeline-dot.pending { background-color: #e5e5e5; color: #999999; }
+    .timeline-label { font-size: 10px; color: #666666; text-align: center; max-width: 80px; line-height: 1.3; font-weight: 500; }
+    .timeline-label.current { color: #D40511; font-weight: 700; }
+    
+    /* Sections */
+    .section { padding: 25px 30px; border-bottom: 1px solid #f0f0f0; }
+    .section:last-child { border-bottom: none; }
+    .section-title { font-size: 12px; color: #D40511; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    
+    /* Info Grid */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .info-item { display: flex; flex-direction: column; }
+    .info-label { font-size: 10px; color: #999999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600; }
+    .info-value { font-size: 13px; color: #1a1a1a; font-weight: 600; line-height: 1.4; }
+    
+    /* Summary Card */
+    .summary-card { background-color: #fafafa; border-radius: 8px; padding: 20px; border-left: 4px solid #D40511; }
+    .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eeeeee; }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-label { font-size: 12px; color: #666666; }
+    .summary-value { font-size: 13px; color: #1a1a1a; font-weight: 700; }
+    .summary-value.status { color: #D40511; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    /* Payment Card */
+    .payment-card { background-color: #fffbeb; border-radius: 8px; padding: 20px; border: 1px solid #fbbf24; text-align: center; }
+    .payment-status { font-size: 16px; font-weight: 800; color: #92400e; margin-bottom: 6px; }
+    .payment-text { font-size: 13px; color: #a16207; line-height: 1.5; }
+    
+    /* Amount */
+    .amount-section { text-align: center; padding: 30px; background-color: #fafafa; }
+    .amount-label { font-size: 11px; color: #888888; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .amount-value { font-size: 36px; font-weight: 900; color: #D40511; letter-spacing: -1px; }
+    
+    /* CTA */
+    .cta-section { padding: 30px; text-align: center; background-color: #ffffff; }
+    .cta-button { display: inline-block; background-color: #D40511; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .cta-button:hover { background-color: #b0040e; }
+    
+    /* Reply */
+    .reply-section { padding: 25px 30px; background-color: #f0f7ff; border-top: 1px solid #dbeafe; }
+    .reply-text { font-size: 13px; color: #1e40af; text-align: center; line-height: 1.6; }
+    .reply-text strong { color: #1e3a8a; }
+    
+    /* Footer */
+    .footer { background-color: #1a1a1a; padding: 35px 30px; text-align: center; color: #999999; }
+    .footer-logo { font-size: 24px; font-weight: 900; color: #ffffff; letter-spacing: 4px; margin-bottom: 6px; }
+    .footer-sub { color: #FFCC00; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; }
+    .footer-links { margin-bottom: 20px; }
+    .footer-links a { color: #cccccc; text-decoration: none; font-size: 12px; margin: 0 12px; }
+    .footer-text { font-size: 11px; line-height: 1.6; margin-bottom: 6px; }
+    .footer-divider { height: 1px; background-color: #333333; margin: 20px 0; }
+    .footer-copyright { font-size: 10px; color: #666666; }
+    
+    /* DHL Stripe */
+    .dhl-stripe { height: 6px; background: linear-gradient(90deg, #D40511 0%, #D40511 33%, #FFCC00 33%, #FFCC00 66%, #D40511 66%, #D40511 100%); }
+    
+    /* Mobile */
+    @media screen and (max-width: 600px) {
+      .header { padding: 20px 25px; }
+      .hero { padding: 30px 25px; }
+      .tracking-card { margin: -15px 20px 0; padding: 20px; }
+      .tracking-code { font-size: 22px; letter-spacing: 2px; }
+      .section { padding: 20px 25px; }
+      .info-grid { grid-template-columns: 1fr; gap: 12px; }
+      .timeline-label { font-size: 9px; max-width: 60px; }
+      .timeline-dot { width: 24px; height: 24px; font-size: 10px; }
+      .amount-value { font-size: 28px; }
+      .cta-button { padding: 14px 36px; font-size: 14px; display: block; }
+    }
+  </style>
+</head>
+<body>
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td>
+        <div class="email-wrapper">
+          
+          <!-- DHL Stripe -->
+          <div class="dhl-stripe"></div>
+          
+          <!-- Header -->
+          <div class="header">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+              <tr>
+                <td>
+                  <div class="logo">DHL</div>
+                  <div class="logo-sub">Express Delivery Services</div>
+                </td>
+                <td align="right">
+                  <div class="header-badge">Official</div>
+                </td>
+              </tr>
+            </table>
+          </div>
+                    <!-- Hero -->
+          <div class="hero">
+            <div class="hero-icon">📦</div>
+            <div class="hero-title">Your Shipment Has Been Registered</div>
+            <div class="hero-text">${greeting} <strong>${receiverName}</strong>, your package has been successfully created and is now in our system.</div>
+          </div>
+          
+          <!-- Tracking Card -->
+          <div class="tracking-card">
+            <div class="tracking-label">Tracking Number</div>
+            <div class="tracking-code">${trackingCode}</div>
+            <div class="tracking-hint">Use this number to monitor your shipment in real time</div>
+          </div>
+          
+          <!-- Timeline -->
+          <div class="timeline-section">
+            <div class="timeline-title">Shipment Progress</div>
+            <div class="timeline">
+              ${timeline.map(step => `
+              <div class="timeline-step">
+                <div class="timeline-dot ${step.state}">${step.icon}</div>
+                <div class="timeline-label ${step.state}">${step.label}</div>
+              </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <!-- Shipment Details -->
+          <div class="section">
+            <div class="section-title">📋 Shipment Details</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Tracking Number</span>
+                <span class="info-value" style="font-family:'Courier New',monospace;">${trackingCode}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Package Name</span>
+                <span class="info-value">${packageName}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Weight</span>
+                <span class="info-value">${packageWeight} kg</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Shipping Cost</span>
+                <span class="info-value">$${deliveryPrice.toFixed(2)}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Date Created</span>
+                <span class="info-value">${createdDate} at ${createdTime}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Receipt ID</span>
+                <span class="info-value" style="font-family:'Courier New',monospace;">${receiptId}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Summary -->
+          <div class="section">
+            <div class="section-title">📊 Shipment Summary</div>
+            <div class="summary-card">
+              <div class="summary-row">
+                <span class="summary-label">Current Status</span>
+                <span class="summary-value status">Pending Payment</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Origin</span>
+                <span class="summary-value">${senderCity}, ${senderCountry}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Destination</span>
+                <span class="summary-value">${receiverCity}, ${receiverCountry}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Service Type</span>
+                <span class="summary-value">Express International</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Sender Info -->
+          <div class="section">
+            <div class="section-title">📤 Sender Information</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Name</span>
+                <span class="info-value">${senderName}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Email</span>
+                <span class="info-value">${senderEmail}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Phone</span>
+                <span class="info-value">${senderPhone}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Address</span>
+                <span class="info-value">${senderAddress}, ${senderCity}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Receiver Info -->
+          <div class="section">
+            <div class="section-title">📥 Receiver Information</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Name</span>
+                <span class="info-value">${receiverName}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Email</span>
+                <span class="info-value">${receiverEmail}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Phone</span>
+                <span class="info-value">${receiverPhone}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Address</span>
+                <span class="info-value">${receiverAddress}, ${receiverCity}</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Payment -->
+          <div class="section">
+            <div class="section-title">💳 Payment Status</div>
+            <div class="payment-card">
+              <div class="payment-status">⏳ Pending Payment</div>
+              <div class="payment-text">Your shipment will begin processing immediately after payment confirmation. Please contact the sender to arrange payment.</div>
+            </div>
+          </div>
+          
+          <!-- Amount -->
+          <div class="amount-section">
+            <div class="amount-label">Total Amount Due</div>
+            <div class="amount-value">$${deliveryPrice.toFixed(2)}</div>
+          </div>
+          
+          <!-- CTA -->
+          <div class="cta-section">
+            <a href="${trackingUrl}/track/${trackingCode}" class="cta-button">Track Your Shipment</a>
+          </div>
+          
+          <!-- Reply -->
+          <div class="reply-section">
+            <div class="reply-text">
+              <strong>Need help?</strong> Reply directly to this email for payment arrangements, delivery confirmation, or any questions about your shipment. Our support team is here to assist you.
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="footer">
+            <div class="footer-logo">DHL</div>
+            <div class="footer-sub">Express Delivery Services</div>
+            <div class="footer-links">
+              <a href="#">Support</a>
+              <a href="#">Contact Us</a>
+              <a href="#">Terms</a>
+            </div>
+            <div class="footer-text">Thank you for choosing DHL Express Delivery.</div>
+            <div class="footer-text">Reliable shipping, delivered with care.</div>
+            <div class="footer-divider"></div>
+            <div class="footer-text">Customer Support: <a href="mailto:${EMAIL_FROM}" style="color:#FFCC00;">${EMAIL_FROM}</a></div>
+            <div class="footer-copyright">© 2026 DHL Express Delivery Services. All rights reserved.<br>This is an automated email. Please reply if you require assistance.</div>
+          </div>
+          
+          <div class="dhl-stripe"></div>
+          
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+};
+
+// Status update template
+const buildStatusUpdateTemplate = (vars) => {
+  const {
+    greeting,
+    receiverName,
+    trackingCode,
+    packageName,
+    packageWeight,
+    deliveryPrice,
+    oldStatus,
+    newStatus,
+    senderCity,
+    senderCountry,
+    receiverCity,
+    receiverCountry,
+    trackingUrl,
+  } = vars;
+
+  const timeline = getTimeline(newStatus);
+  
+  const statusConfig = {
+    pending: { color: '#f59e0b', bg: '#fffbeb', label: 'Pending Payment' },
+    in_transit: { color: '#3b82f6', bg: '#eff6ff', label: 'In Transit' },
+    arrived: { color: '#8b5cf6', bg: '#f5f3ff', label: 'Arrived at Destination' },
+    delivered: { color: '#10b981', bg: '#ecfdf5', label: 'Delivered' },
+    stopped: { color: '#ef4444', bg: '#fef2f2', label: 'On Hold' },
+  };
+  
+  const config = statusConfig[newStatus] || statusConfig.pending;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DHL Shipment Update - ${trackingCode}</title>
+  <style>
+    body, table, td, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #333333; -webkit-font-smoothing: antialiased; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+    .header { background-color: #D40511; padding: 30px 40px; }
+    .logo { font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: 4px; }
+    .logo-sub { color: #FFCC00; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+    .dhl-stripe { height: 6px; background: linear-gradient(90deg, #D40511 0%, #D40511 33%, #FFCC00 33%, #FFCC00 66%, #D40511 66%, #D40511 100%); }
+    .content { padding: 40px; }
+    .greeting { font-size: 16px; color: #666666; margin-bottom: 6px; }
+    .receiver-name { font-size: 28px; font-weight: 900; color: #1a1a1a; margin-bottom: 25px; }
+    .status-banner { background-color: ${config.bg}; border-radius: 8px; padding: 30px; text-align: center; margin-bottom: 30px; border: 2px solid ${config.color}; }
+    .status-icon { font-size: 48px; margin-bottom: 12px; }
+    .status-title { color: ${config.color}; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .status-message { color: #4b5563; font-size: 14px; line-height: 1.6; }
+    .status-change { margin-top: 15px; }
+    .old-badge { display: inline-block; background-color: #e5e7eb; color: #6b7280; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .arrow { color: #9ca3af; margin: 0 8px; font-size: 14px; }
+    .new-badge { display: inline-block; background-color: ${config.color}; color: #ffffff; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .tracking-section { background-color: #fafafa; border-radius: 8px; padding: 25px; text-align: center; margin-bottom: 25px; }
+    .tracking-label { font-size: 11px; color: #888888; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .tracking-code { font-size: 26px; font-weight: 900; color: #1a1a1a; letter-spacing: 3px; font-family: 'Courier New', monospace; }
+    .summary { background-color: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+    .summary-title { font-size: 12px; color: #D40511; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eeeeee; }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-label { font-size: 12px; color: #666666; }
+    .summary-value { font-size: 13px; color: #1a1a1a; font-weight: 700; }
+    .cta-section { text-align: center; margin: 30px 0; }
+    .cta-button { display: inline-block; background-color: #D40511; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-size: 15px; font-weight: 700; text-transform: uppercase; }
+    .reply-section { padding: 20px; background-color: #f0f7ff; border-top: 1px solid #dbeafe; }
+    .reply-text { font-size: 13px; color: #1e40af; text-align: center; }
+    .footer { background-color: #1a1a1a; padding: 30px; text-align: center; color: #999999; }
+    .footer-logo { font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: 4px; margin-bottom: 6px; }
+    .footer-sub { color: #FFCC00; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; }
+    .footer-text { font-size: 11px; line-height: 1.6; margin-bottom: 6px; }
+    .footer-divider { height: 1px; background-color: #333333; margin: 15px 0; }
+    .footer-copyright { font-size: 10px; color: #666666; }
+    @media screen and (max-width: 600px) {
+      .header, .content { padding: 25px; }
+      .receiver-name { font-size: 24px; }
+      .tracking-code { font-size: 20px; }
+      .cta-button { display: block; padding: 14px 30px; }
+    }
+  </style>
+</head>
+<body>
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+    <tr>
+      <td>
+        <div class="email-wrapper">
+          <div class="dhl-stripe"></div>
+          <div class="header">
+            <div class="logo">DHL</div>
+            <div class="logo-sub">Express Delivery Services</div>
+          </div>
+          <div class="content">
+            <div class="greeting">${greeting}</div>
+            <div class="receiver-name">${receiverName}</div>
+            
+            <div class="status-banner">
+              <div class="status-icon">📦</div>
+              <div class="status-title">${newStatus.replace('_',' ').toUpperCase()}</div>
+              <div class="status-message">Your shipment status has been updated. ${newStatus === 'in_transit' ? 'Your package is now on the move!' : newStatus === 'delivered' ? 'Your package has been successfully delivered!' : 'Please check the details below.'}</div>
+              <div class="status-change">
+                <span class="old-badge">${oldStatus.replace('_',' ').toUpperCase()}</span>
+                <span class="arrow">→</span>
+                <span class="new-badge">${newStatus.replace('_',' ').toUpperCase()}</span>
+              </div>
+            </div>
+                      <div class="tracking-section">
+              <div class="tracking-label">Tracking Number</div>
+              <div class="tracking-code">${trackingCode}</div>
+            </div>
+            
+            <div class="summary">
+              <div class="summary-title">Shipment Summary</div>
+              <div class="summary-row">
+                <span class="summary-label">Package</span>
+                <span class="summary-value">${packageName}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Weight</span>
+                <span class="summary-value">${packageWeight} kg</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Amount</span>
+                <span class="summary-value">$${deliveryPrice.toFixed(2)}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Route</span>
+                <span class="summary-value">${senderCity} → ${receiverCity}</span>
+              </div>
+            </div>
+            
+            <div class="cta-section">
+              <a href="${trackingUrl}/track/${trackingCode}" class="cta-button">Track Your Shipment</a>
+            </div>
+          </div>
+          
+          <div class="reply-section">
+            <div class="reply-text"><strong>Questions?</strong> Reply to this email for any inquiries about your shipment.</div>
+          </div>
+          
+          <div class="footer">
+            <div class="footer-logo">DHL</div>
+            <div class="footer-sub">Express Delivery Services</div>
+            <div class="footer-text">Thank you for choosing DHL Express Delivery.</div>
+            <div class="footer-divider"></div>
+            <div class="footer-copyright">© 2026 DHL Express Delivery Services. All rights reserved.<br>This is an automated email. Please reply if you require assistance.</div>
+          </div>
+          <div class="dhl-stripe"></div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+};
+
 const sendShipmentCreatedEmail = async (pkg) => {
   console.log('📦 sendShipmentCreatedEmail called for:', pkg.receiverEmail);
+  
   const trackingUrl = process.env.FRONTEND_URL || 'https://dxti-delivery.onrender.com';
   const greeting = getGreeting(pkg.receiverGender);
   const createdDate = new Date(pkg.createdAt).toLocaleDateString('en-US', {
@@ -66,435 +604,58 @@ const sendShipmentCreatedEmail = async (pkg) => {
     hour: '2-digit', minute: '2-digit'
   });
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your DHL Shipment Has Been Created</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-    body { margin:0; padding:0; background:#f5f5f5; font-family:'Inter','Segoe UI',Arial,sans-serif; -webkit-font-smoothing:antialiased; }
-    .email-wrapper { max-width:680px; margin:0 auto; background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.15); }
-    .header { background:linear-gradient(135deg,#D40511 0%,#BA0410 50%,#8B0000 100%); padding:50px 40px 40px; text-align:center; position:relative; }
-    .header::after { content:''; position:absolute; bottom:-30px; left:0; right:0; height:60px; background:#fff; border-radius:50% 50% 0 0; }
-    .logo { font-size:48px; font-weight:900; color:#fff; letter-spacing:8px; text-shadow:0 2px 10px rgba(0,0,0,0.3); }
-    .logo-sub { color:#FFCC00; font-size:13px; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-top:8px; }
-    .dhl-stripe { height:8px; background:linear-gradient(90deg,#D40511 0%,#D40511 33%,#FFCC00 33%,#FFCC00 66%,#D40511 66%,#D40511 100%); }
-    .content { padding:50px 40px 30px; }
-    .greeting-section { text-align:center; margin-bottom:35px; }
-    .greeting { font-size:18px; color:#6b7280; font-weight:500; letter-spacing:1px; }
-    .receiver-name { font-size:36px; font-weight:900; color:#D40511; margin-top:8px; letter-spacing:-0.5px; }
-    .success-banner { background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%); border-radius:16px; padding:28px; margin-bottom:30px; border:2px solid #28a745; text-align:center; position:relative; overflow:hidden; }
-    .success-banner::before { content:'✓'; position:absolute; top:-10px; right:20px; font-size:80px; color:rgba(40,167,69,0.08); font-weight:900; }
-    .success-title { color:#155724; font-size:20px; font-weight:800; margin-bottom:10px; }
-    .success-text { color:#155724; font-size:14px; line-height:1.6; }
-    .success-text strong { font-weight:700; }
-    .info-card { background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%); border-radius:16px; padding:28px; margin-bottom:25px; border-left:5px solid #D40511; }
-    .info-card-title { font-size:12px; color:#D40511; font-weight:800; text-transform:uppercase; letter-spacing:2px; margin-bottom:15px; }
-    .info-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #dee2e6; }
-    .info-row:last-child { border-bottom:none; }
-    .info-label { font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
-    .info-value { font-size:14px; color:#1f2937; font-weight:700; }
-    .tracking-section { background:linear-gradient(135deg,#FFF8E1 0%,#FFECB3 100%); border-radius:16px; padding:35px; text-align:center; margin-bottom:25px; border:3px dashed #FFCC00; position:relative; }
-    .tracking-label { color:#B8860B; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:3px; margin-bottom:12px; }
-    .tracking-code { color:#1f2937; font-size:38px; font-weight:900; letter-spacing:6px; font-family:'Courier New',monospace; text-shadow:0 2px 4px rgba(0,0,0,0.1); }
-    .tracking-hint { color:#B8860B; font-size:12px; margin-top:10px; font-weight:500; }
-    .amount-section { background:linear-gradient(135deg,#fff5f5 0%,#ffe0e0 100%); border-radius:16px; padding:30px; text-align:center; margin-bottom:25px; border:2px solid #D40511; }
-    .amount-label { font-size:12px; color:#D40511; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:8px; }
-    .amount-value { font-size:44px; font-weight:900; color:#D40511; letter-spacing:-1px; }
-    .amount-note { font-size:13px; color:#991b1b; margin-top:12px; padding:12px 16px; background:rgba(212,5,17,0.08); border-radius:8px; font-weight:600; line-height:1.5; }
-    .status-alert { background:linear-gradient(135deg,#fff3cd 0%,#ffeeba 100%); border-radius:12px; padding:18px; margin-bottom:25px; border:2px solid #ffc107; text-align:center; }
-    .status-alert-icon { font-size:28px; margin-bottom:8px; }
-    .status-alert-text { color:#856404; font-size:14px; font-weight:600; line-height:1.5; }
-    .cta-section { text-align:center; margin:30px 0; }
-    .cta-text { font-size:15px; color:#4b5563; font-weight:600; margin-bottom:20px; line-height:1.6; }
-    .btn-track { display:inline-block; background:linear-gradient(135deg,#D40511 0%,#BA0410 100%); color:#fff; text-decoration:none; padding:20px 60px; border-radius:50px; font-size:18px; font-weight:800; letter-spacing:1px; box-shadow:0 8px 25px rgba(212,5,17,0.35); transition:all 0.3s; }
-    .btn-track:hover { transform:translateY(-3px); box-shadow:0 12px 35px rgba(212,5,17,0.45); }
-    .btn-arrow { margin-left:8px; font-size:20px; }
-    .reply-section { background:linear-gradient(135deg,#e7f3ff 0%,#d4e9ff 100%); border-radius:12px; padding:20px; margin-top:25px; border:2px solid #b3d9ff; text-align:center; }
-    .reply-icon { font-size:24px; margin-bottom:8px; }
-    .reply-text { color:#004085; font-size:14px; font-weight:600; line-height:1.5; }
-    .divider { height:2px; background:linear-gradient(90deg,transparent,#dee2e6,transparent); margin:30px 0; }
-    .details-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:25px; }
-    .detail-card { background:#f8f9fa; border-radius:12px; padding:18px; border:1px solid #e5e7eb; }
-    .detail-card-title { font-size:11px; color:#D40511; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #e5e7eb; }
-    .detail-item { margin-bottom:10px; }
-    .detail-item:last-child { margin-bottom:0; }
-    .detail-label { font-size:10px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
-    .detail-value { font-size:13px; color:#1f2937; font-weight:600; line-height:1.4; }
-    .footer { background:linear-gradient(135deg,#1f2937 0%,#111827 100%); padding:40px 30px; text-align:center; color:#9ca3af; }
-    .footer-brand { color:#fff; font-size:24px; font-weight:900; letter-spacing:6px; margin-bottom:8px; }
-    .footer-sub { color:#FFCC00; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin-bottom:15px; }
-    .footer-text { font-size:12px; line-height:1.6; margin-bottom:8px; }
-    .footer-divider { height:1px; background:#374151; margin:20px 0; }
-    .footer-copyright { font-size:11px; color:#6b7280; }
-    .social-links { margin:15px 0; }
-    .social-links a { display:inline-block; margin:0 8px; color:#9ca3af; text-decoration:none; font-size:12px; }
-    @media (max-width:600px) {
-      .content { padding:30px 20px; }
-      .details-grid { grid-template-columns:1fr; }
-      .tracking-code { font-size:28px; letter-spacing:3px; }
-      .amount-value { font-size:36px; }
-      .btn-track { padding:18px 40px; font-size:16px; }
-      .receiver-name { font-size:28px; }
-    }
-  </style>
-</head>
-<body>
-  <div style="background:#f5f5f5; padding:20px 10px;">
-    <div class="email-wrapper">
-      <div class="dhl-stripe"></div>
-      <div class="header">
-        <div class="logo">DHL</div>
-        <div class="logo-sub">Express Delivery Services</div>
-      </div>
-      
-      <div class="content">
-        <div class="greeting-section">
-          <div class="greeting">${greeting}</div>
-          <div class="receiver-name">${pkg.receiverName}</div>
-        </div>
+  const templateVars = {
+    greeting,
+    receiverName: pkg.receiverName,
+    trackingCode: pkg.trackingCode,
+    packageName: pkg.packageName,
+    packageWeight: pkg.packageWeight,
+    deliveryPrice: pkg.deliveryPrice,
+    senderName: pkg.senderName,
+    senderEmail: pkg.senderEmail,
+    senderPhone: pkg.senderPhone,
+    senderAddress: pkg.senderAddress,
+    senderCity: pkg.senderCity,
+    senderCountry: pkg.senderCountry,
+    receiverEmail: pkg.receiverEmail,
+    receiverPhone: pkg.receiverPhone,
+    receiverAddress: pkg.receiverAddress,
+    receiverCity: pkg.receiverCity,
+    receiverCountry: pkg.receiverCountry,
+    createdDate,
+    createdTime,
+    trackingUrl,
+    receiptId: pkg.receipt?.receiptId || 'N/A',
+  };
 
-        <div class="success-banner">
-          <div class="success-title">✅ Shipment Created Successfully!</div>
-          <div class="success-text">
-            Your package <strong>"${pkg.packageName}"</strong> has been created and registered in our system.<br>
-            It is currently <strong>pending</strong> and awaiting processing due to outstanding payment clearance.
-          </div>
-        </div>
-
-        <div class="tracking-section">
-          <div class="tracking-label">Your Tracking Number</div>
-          <div class="tracking-code">${pkg.trackingCode}</div>
-          <div class="tracking-hint">Use this code to track your shipment in real-time</div>
-        </div>
-
-        <div class="details-grid">
-          <div class="detail-card">
-            <div class="detail-card-title">📦 Package Info</div>
-            <div class="detail-item">
-              <div class="detail-label">Package Name</div>
-              <div class="detail-value">${pkg.packageName}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">Weight</div>
-              <div class="detail-value">${pkg.packageWeight} kg</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">Service Type</div>
-              <div class="detail-value">Express International</div>
-            </div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-card-title">📍 Route</div>
-            <div class="detail-item">
-              <div class="detail-label">From</div>
-              <div class="detail-value">${pkg.senderCity}, ${pkg.senderCountry}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">To</div>
-              <div class="detail-value">${pkg.receiverCity}, ${pkg.receiverCountry}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">Status</div>
-              <div class="detail-value" style="color:#D40511; font-weight:800;">PENDING</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="info-card">
-          <div class="info-card-title">👤 Sender Information</div>
-          <div class="info-row">
-            <span class="info-label">Name</span>
-            <span class="info-value">${pkg.senderName}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Email</span>
-            <span class="info-value">${pkg.senderEmail}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Phone</span>
-            <span class="info-value">${pkg.senderPhone}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Address</span>
-            <span class="info-value">${pkg.senderAddress}, ${pkg.senderCity}</span>
-          </div>
-        </div>
-
-        <div class="info-card">
-          <div class="info-card-title">🎯 Receiver Information</div>
-          <div class="info-row">
-            <span class="info-label">Name</span>
-            <span class="info-value">${pkg.receiverName}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Email</span>
-            <span class="info-value">${pkg.receiverEmail}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Phone</span>
-            <span class="info-value">${pkg.receiverPhone}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Address</span>
-            <span class="info-value">${pkg.receiverAddress}, ${pkg.receiverCity}</span>
-          </div>
-        </div>
-
-        <div class="amount-section">
-          <div class="amount-label">Total Shipping Amount Due</div>
-          <div class="amount-value">$${pkg.deliveryPrice.toFixed(2)}</div>
-          <div class="amount-note">
-            ⚠️ <strong>Payment Required:</strong> This shipment is currently on hold pending payment clearance. 
-            Please contact the sender or reply to this email to arrange payment and confirm delivery details.
-          </div>
-        </div>
-
-        <div class="status-alert">
-          <div class="status-alert-icon">⏳</div>
-          <div class="status-alert-text">
-            <strong>Current Status:</strong> PENDING<br>
-            Your package will remain in pending status until payment is confirmed. 
-            Once cleared, it will proceed to processing and shipping.
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="cta-section">
-          <div class="cta-text">
-            Track your shipment in real-time to see live updates on location, status changes, and estimated delivery time. 
-            Click the button below to access your tracking page.
-          </div>
-          <a href="${trackingUrl}/track/${pkg.trackingCode}" class="btn-track">
-            Track Your Shipment <span class="btn-arrow">→</span>
-          </a>
-        </div>
-
-        <div class="reply-section">
-          <div class="reply-icon">📧</div>
-          <div class="reply-text">
-            <strong>Need assistance?</strong> Reply directly to this email for payment arrangements, 
-            delivery confirmation, or any questions about your shipment. Our support team is ready to help.
-          </div>
-        </div>
-
-        <div class="info-card" style="margin-top:25px; border-left-color:#28a745;">
-          <div class="info-card-title" style="color:#28a745;">📅 Shipment Details</div>
-          <div class="info-row">
-            <span class="info-label">Created On</span>
-            <span class="info-value">${createdDate} at ${createdTime}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Tracking Code</span>
-            <span class="info-value" style="font-family:'Courier New',monospace;">${pkg.trackingCode}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Receipt ID</span>
-            <span class="info-value" style="font-family:'Courier New',monospace;">${pkg.receipt?.receiptId || 'N/A'}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="footer">
-        <div class="footer-brand">DHL</div>
-        <div class="footer-sub">Express Delivery Services</div>
-        <div class="footer-text">
-          Thank you for choosing DHL Express Delivery.<br>
-          We are committed to delivering your packages safely and on time.
-        </div>
-        <div class="footer-divider"></div>
-        <div class="footer-copyright">
-          © 2026 DHL Express Delivery Services. All rights reserved.<br>
-          This is an automated message. Please do not reply directly for general inquiries.
-        </div>
-      </div>
-      <div class="dhl-stripe"></div>
-    </div>
-  </div>
-</body>
-</html>`;
-
-  await sendEmail(pkg.receiverEmail, `📦 Your DHL Shipment Has Been Created — Tracking: ${pkg.trackingCode}`, html);
+  const html = buildShipmentTemplate(templateVars);
+  await sendEmail(pkg.receiverEmail, `📦 DHL Shipment Created — Tracking: ${pkg.trackingCode}`, html);
 };
 
 const sendStatusUpdateEmail = async (pkg, oldStatus) => {
   console.log('📦 sendStatusUpdateEmail called for:', pkg.receiverEmail);
+  
   const trackingUrl = process.env.FRONTEND_URL || 'https://dxti-delivery.onrender.com';
   const greeting = getGreeting(pkg.receiverGender);
-  const statusIcons = {
-    pending: '⏳', in_transit: '🚚', arrived: '📍', delivered: '✅', stopped: '⚠️',
-  };
-  const statusMessages = {
-    pending: 'Your shipment is awaiting pickup and payment clearance.',
-    in_transit: 'Your package is on the move! Track its journey in real-time.',
-    arrived: 'Your package has arrived at the destination facility and is ready for final delivery.',
-    delivered: 'Your package has been successfully delivered! Thank you for choosing DHL Express.',
-    stopped: 'There is a temporary hold on your shipment. Please contact support for details.',
-  };
-  const statusColors = {
-    pending: '#f59e0b', in_transit: '#3b82f6', arrived: '#8b5cf6', delivered: '#10b981', stopped: '#ef4444',
-  };
-  const statusBgColors = {
-    pending: '#fffbeb', in_transit: '#eff6ff', arrived: '#f5f3ff', delivered: '#ecfdf5', stopped: '#fef2f2',
-  };
-  const statusBorderColors = {
-    pending: '#fbbf24', in_transit: '#60a5fa', arrived: '#a78bfa', delivered: '#34d399', stopped: '#f87171',
+
+  const templateVars = {
+    greeting,
+    receiverName: pkg.receiverName,
+    trackingCode: pkg.trackingCode,
+    packageName: pkg.packageName,
+    packageWeight: pkg.packageWeight,
+    deliveryPrice: pkg.deliveryPrice,
+    oldStatus,
+    newStatus: pkg.status,
+    senderCity: pkg.senderCity,
+    senderCountry: pkg.senderCountry,
+    receiverCity: pkg.receiverCity,
+    receiverCountry: pkg.receiverCountry,
+    trackingUrl,
   };
 
-  const icon = statusIcons[pkg.status] || '📦';
-  const message = statusMessages[pkg.status] || 'Your shipment status has been updated.';
-  const color = statusColors[pkg.status] || '#6b7280';
-  const bgColor = statusBgColors[pkg.status] || '#f9fafb';
-  const borderColor = statusBorderColors[pkg.status] || '#e5e7eb';
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DHL Shipment Status Update</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-    body { margin:0; padding:0; background:#f5f5f5; font-family:'Inter','Segoe UI',Arial,sans-serif; -webkit-font-smoothing:antialiased; }
-    .email-wrapper { max-width:680px; margin:0 auto; background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.15); }
-    .header { background:linear-gradient(135deg,#D40511 0%,#BA0410 50%,#8B0000 100%); padding:50px 40px 40px; text-align:center; position:relative; }
-    .header::after { content:''; position:absolute; bottom:-30px; left:0; right:0; height:60px; background:#fff; border-radius:50% 50% 0 0; }
-    .logo { font-size:48px; font-weight:900; color:#fff; letter-spacing:8px; text-shadow:0 2px 10px rgba(0,0,0,0.3); }
-    .logo-sub { color:#FFCC00; font-size:13px; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-top:8px; }
-    .dhl-stripe { height:8px; background:linear-gradient(90deg,#D40511 0%,#D40511 33%,#FFCC00 33%,#FFCC00 66%,#D40511 66%,#D40511 100%); }
-    .content { padding:50px 40px 30px; }
-    .greeting-section { text-align:center; margin-bottom:30px; }
-    .greeting { font-size:18px; color:#6b7280; font-weight:500; }
-    .receiver-name { font-size:32px; font-weight:900; color:#D40511; margin-top:8px; }
-    .status-banner { background:${bgColor}; border-radius:16px; padding:35px; text-align:center; margin-bottom:30px; border:3px solid ${borderColor}; position:relative; overflow:hidden; }
-    .status-banner::before { content:'${icon}'; position:absolute; top:-15px; right:25px; font-size:100px; opacity:0.06; }
-    .status-icon { font-size:56px; margin-bottom:15px; }
-    .status-title { color:${color}; font-size:26px; font-weight:900; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px; }
-    .status-message { color:#4b5563; font-size:15px; line-height:1.7; max-width:500px; margin:0 auto; }
-    .old-status { display:inline-block; background:#e5e7eb; color:#6b7280; padding:6px 16px; border-radius:20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-top:15px; }
-    .arrow { color:#9ca3af; margin:0 8px; font-size:14px; }
-    .new-status { display:inline-block; background:${color}; color:#fff; padding:6px 16px; border-radius:20px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
-    .tracking-section { background:linear-gradient(135deg,#FFF8E1 0%,#FFECB3 100%); border-radius:16px; padding:30px; text-align:center; margin-bottom:25px; border:2px dashed #FFCC00; }
-    .tracking-label { color:#B8860B; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:3px; margin-bottom:10px; }
-    .tracking-code { color:#1f2937; font-size:32px; font-weight:900; letter-spacing:4px; font-family:'Courier New',monospace; }
-    .package-summary { background:#f8f9fa; border-radius:12px; padding:20px; margin-bottom:25px; border:1px solid #e5e7eb; }
-    .summary-title { font-size:12px; color:#D40511; font-weight:800; text-transform:uppercase; letter-spacing:2px; margin-bottom:15px; }
-    .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; text-align:center; }
-    .summary-item { padding:12px; background:#fff; border-radius:8px; }
-    .summary-label { font-size:10px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
-    .summary-value { font-size:14px; color:#1f2937; font-weight:700; }
-    .cta-section { text-align:center; margin:30px 0; }
-    .cta-text { font-size:15px; color:#4b5563; font-weight:600; margin-bottom:20px; line-height:1.6; }
-    .btn-track { display:inline-block; background:linear-gradient(135deg,#D40511 0%,#BA0410 100%); color:#fff; text-decoration:none; padding:18px 50px; border-radius:50px; font-size:17px; font-weight:800; letter-spacing:1px; box-shadow:0 8px 25px rgba(212,5,17,0.35); }
-    .reply-section { background:linear-gradient(135deg,#e7f3ff 0%,#d4e9ff 100%); border-radius:12px; padding:20px; margin-top:25px; border:2px solid #b3d9ff; text-align:center; }
-    .reply-icon { font-size:24px; margin-bottom:8px; }
-    .reply-text { color:#004085; font-size:14px; font-weight:600; line-height:1.5; }
-    .footer { background:linear-gradient(135deg,#1f2937 0%,#111827 100%); padding:40px 30px; text-align:center; color:#9ca3af; }
-    .footer-brand { color:#fff; font-size:24px; font-weight:900; letter-spacing:6px; margin-bottom:8px; }
-    .footer-sub { color:#FFCC00; font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin-bottom:15px; }
-    .footer-text { font-size:12px; line-height:1.6; margin-bottom:8px; }
-    .footer-divider { height:1px; background:#374151; margin:20px 0; }
-    .footer-copyright { font-size:11px; color:#6b7280; }
-    @media (max-width:600px) {
-      .content { padding:30px 20px; }
-      .summary-grid { grid-template-columns:1fr; }
-      .tracking-code { font-size:24px; }
-      .status-title { font-size:20px; }
-      .receiver-name { font-size:26px; }
-      .btn-track { padding:16px 35px; font-size:15px; }
-    }
-  </style>
-</head>
-<body>
-  <div style="background:#f5f5f5; padding:20px 10px;">
-    <div class="email-wrapper">
-      <div class="dhl-stripe"></div>
-      <div class="header">
-        <div class="logo">DHL</div>
-        <div class="logo-sub">Express Delivery Services</div>
-      </div>
-      
-      <div class="content">
-        <div class="greeting-section">
-          <div class="greeting">${greeting}</div>
-          <div class="receiver-name">${pkg.receiverName}</div>
-        </div>
-
-        <div class="status-banner">
-          <div class="status-icon">${icon}</div>
-          <div class="status-title">${pkg.status.replace('_',' ').toUpperCase()}</div>
-          <div class="status-message">${message}</div>
-          <div style="margin-top:15px;">
-            <span class="old-status">${oldStatus.replace('_',' ').toUpperCase()}</span>
-            <span class="arrow">→</span>
-            <span class="new-status">${pkg.status.replace('_',' ').toUpperCase()}</span>
-          </div>
-        </div>
-
-        <div class="tracking-section">
-          <div class="tracking-label">Tracking Number</div>
-          <div class="tracking-code">${pkg.trackingCode}</div>
-        </div>
-
-        <div class="package-summary">
-          <div class="summary-title">📦 Shipment Summary</div>
-          <div class="summary-grid">
-            <div class="summary-item">
-              <div class="summary-label">Package</div>
-              <div class="summary-value">${pkg.packageName}</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-label">Weight</div>
-              <div class="summary-value">${pkg.packageWeight} kg</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-label">Amount</div>
-              <div class="summary-value">$${pkg.deliveryPrice.toFixed(2)}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="cta-section">
-          <div class="cta-text">
-            Stay updated on your shipment's journey. Click below to track real-time location and status updates.
-          </div>
-          <a href="${trackingUrl}/track/${pkg.trackingCode}" class="btn-track">
-            Track Your Shipment →
-          </a>
-        </div>
-
-        <div class="reply-section">
-          <div class="reply-icon">📧</div>
-          <div class="reply-text">
-            <strong>Questions?</strong> Reply to this email for any inquiries about your shipment status or delivery details.
-          </div>
-        </div>
-      </div>
-
-      <div class="footer">
-        <div class="footer-brand">DHL</div>
-        <div class="footer-sub">Express Delivery Services</div>
-        <div class="footer-text">
-          Thank you for choosing DHL Express Delivery.<br>
-          Reliable shipping, delivered with care.
-        </div>
-        <div class="footer-divider"></div>
-        <div class="footer-copyright">
-          © 2026 DHL Express Delivery Services. All rights reserved.
-        </div>
-      </div>
-      <div class="dhl-stripe"></div>
-    </div>
-  </div>
-</body>
-</html>`;
-
-  await sendEmail(pkg.receiverEmail, `${icon} DHL Shipment Update — ${pkg.status.replace('_',' ').toUpperCase()} | ${pkg.trackingCode}`, html);
+  const html = buildStatusUpdateTemplate(templateVars);
+  await sendEmail(pkg.receiverEmail, `📦 DHL Shipment Update — ${pkg.status.replace('_',' ').toUpperCase()} | ${pkg.trackingCode}`, html);
 };
 
 module.exports = { sendShipmentCreatedEmail, sendStatusUpdateEmail };
