@@ -58,6 +58,17 @@ const packageSchema = new mongoose.Schema({
   stopReason: { type: String },
   movementProgress: { type: Number, default: 0, min: 0, max: 1 },
   lastMovementUpdate: { type: Date, default: Date.now },
+
+  // ─── Email Tracking ──────────────────────────────────────────
+  emailSent: { type: Boolean, default: false },
+  emailStatus: { 
+    type: String, 
+    enum: ['sent', 'failed', 'pending', null], 
+    default: null 
+  },
+  emailSentAt: { type: Date },
+  emailError: { type: String },
+
   receipt: {
     receiptId: { type: String, unique: true },
     createdAt: { type: Date, default: Date.now },
@@ -93,24 +104,23 @@ packageSchema.methods.updateMovement = function() {
     const now = new Date();
     const lastUpdate = this.lastMovementUpdate;
     const diffMinutes = (now - lastUpdate) / (1000 * 60);
-    
-    // Move 2% every 5 minutes (faster than before)
+
     if (diffMinutes >= 5) {
       this.movementProgress = Math.min(this.movementProgress + 0.02, 1);
       this.lastMovementUpdate = now;
-      
-      const lat = this.currentLocation.lat + 
+
+      const lat = this.currentLocation.lat +
         (this.destinationLocation.lat - this.currentLocation.lat) * 0.02;
-      const lng = this.currentLocation.lng + 
+      const lng = this.currentLocation.lng +
         (this.destinationLocation.lng - this.currentLocation.lng) * 0.02;
-      
+
       this.currentLocation.lat = parseFloat(lat.toFixed(6));
       this.currentLocation.lng = parseFloat(lng.toFixed(6));
-      
+
       if (this.movementProgress >= 1) {
         this.status = 'arrived';
       }
-      
+
       return true;
     }
   }
