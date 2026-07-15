@@ -8,7 +8,7 @@ const COMPANY_ADDRESS = process.env.COMPANY_ADDRESS  || 'DHL Express, Charles-de
 const FRONTEND_URL    = process.env.FRONTEND_URL     || 'https://dxti-delivery.onrender.com';
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 
-const DHL_HERO_IMAGE = 'https://i.imgur.com/277232.jpg';
+const DHL_HERO_IMAGE = 'https://www.dhl.com/content/dam/images/dhl-logo.svg';
 
 const getGreeting = (gender, name) => {
   const hour = new Date().getHours();
