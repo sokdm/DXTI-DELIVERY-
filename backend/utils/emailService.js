@@ -8,8 +8,8 @@ const COMPANY_ADDRESS = process.env.COMPANY_ADDRESS  || 'DHL Express, Charles-de
 const FRONTEND_URL    = process.env.FRONTEND_URL     || 'https://dxti-delivery.onrender.com';
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 
-// DHL striped logo using CSS gradients (works in all email clients)
-const DHL_LOGO_HTML = `<table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td style="font-size:0;line-height:0;"><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td style="background:linear-gradient(to bottom,#D40511 0%,#D40511 14%,#FFCC00 14%,#FFCC00 28%,#D40511 28%,#D40511 42%,#FFCC00 42%,#FFCC00 56%,#D40511 56%,#D40511 70%,#FFCC00 70%,#FFCC00 84%,#D40511 84%,#D40511 100%);width:6px;height:36px;display:inline-block;vertical-align:middle;">&nbsp;</td><td style="padding-left:10px;vertical-align:middle;"><span style="font-family:Arial,Helvetica,sans-serif;font-size:36px;font-weight:900;color:#D40511;letter-spacing:6px;line-height:1;">DHL</span></td></tr></table></td></tr></table>`;
+// Official DHL Express logo from Wikimedia Commons (yellow bg, red text with stripes)
+const DHL_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/DHL_Logo.svg/2560px-DHL_Logo.svg.png';
 
 const getGreeting = (gender, name) => {
   const hour = new Date().getHours();
@@ -83,31 +83,56 @@ const getDimensions = (pkg) => {
   return `${length} x ${width} x ${height} cm`;
 };
 
-// Generate barcode using inline SVG (works in email clients)
-const generateBarcode = (code, height = 60) => {
-  const bars = [];
-  let x = 0;
-  for (let i = 0; i < code.length; i++) {
-    const char = code.charCodeAt(i);
-    const barWidth = (char % 3) + 1;
-    const spaceWidth = ((char * 7) % 2) + 1;
-    bars.push(`<rect x="${x}" y="0" width="${barWidth}" height="${height}" fill="#000000"/>`);
-    x += barWidth + spaceWidth;
+// Generate barcode using Code 39 character patterns (works in email)
+const generateBarcode = (code) => {
+  // Code 39 barcode patterns using narrow/wide bars
+  const patterns = {
+    '0': 'nnnwwnwnn', '1': 'wnnwnnnnw', '2': 'nnwwnnnnw', '3': 'wnwwnnnnn',
+    '4': 'nnnwwnnnw', '5': 'wnnwwnnnn', '6': 'nnwwwnnnn', '7': 'nnnwnnwnw',
+    '8': 'wnnwnnwnn', '9': 'nnwwnnwnn', 'A': 'wnnnnwnnw', 'B': 'nnwnnwnnw',
+    'C': 'wnwnnwnnn', 'D': 'nnnnwwnnw', 'E': 'wnnnwwnnn', 'F': 'nnwnwwnnn',
+    'G': 'nnnnnwwnw', 'H': 'wnnnnwwnn', 'I': 'nnwnnwwnn', 'J': 'nnnnwwwnn',
+    'K': 'wnnnnnnww', 'L': 'nnwnnnnww', 'M': 'wnwnnnnwn', 'N': 'nnnnwnnww',
+    'O': 'wnnnwnnwn', 'P': 'nnwnwnnwn', 'Q': 'nnnnnnwww', 'R': 'wnnnnnwwn',
+    'S': 'nnwnnnwwn', 'T': 'nnnnwnwwn', 'U': 'wwnnnnnnw', 'V': 'nwwnnnnnw',
+    'W': 'wwwnnnnnn', 'X': 'nwnnwnnnw', 'Y': 'wwnnwnnnn', 'Z': 'nwwnwnnnn',
+    '-': 'nwnnnnwnw', '.': 'wwnnnnwnn', ' ': 'nwwnnnwnn', '$': 'nwnwnwnnn',
+    '/': 'nwnwnnnwn', '+': 'nwnnnwnwn', '%': 'nnnwnwnwn', '*': 'nwnnwnwnn'
+  };
+  
+  const narrow = '<td style="width:2px;background-color:#000;">&nbsp;</td>';
+  const wide = '<td style="width:6px;background-color:#000;">&nbsp;</td>';
+  const narrowSpace = '<td style="width:2px;background-color:#fff;">&nbsp;</td>';
+  const wideSpace = '<td style="width:6px;background-color:#fff;">&nbsp;</td>';
+  
+  let bars = '';
+  const upperCode = code.toUpperCase();
+  
+  for (let i = 0; i < upperCode.length; i++) {
+    const char = upperCode[i];
+    const pattern = patterns[char] || patterns[' '];
+    for (let j = 0; j < pattern.length; j++) {
+      if (pattern[j] === 'n') bars += (j % 2 === 0) ? narrow : narrowSpace;
+      else bars += (j % 2 === 0) ? wide : wideSpace;
+    }
+    // Inter-character gap
+    bars += narrowSpace;
   }
-  const totalWidth = x;
-  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="background-color:#FFFFFF;padding:12px 16px;border:1px solid #D1D5DB;"><svg width="${totalWidth}" height="${height + 24}" viewBox="0 0 ${totalWidth} ${height + 24}" xmlns="http://www.w3.org/2000/svg" style="display:block;">${bars.join('')}<text x="${totalWidth/2}" y="${height + 16}" text-anchor="middle" font-family="'Courier New',monospace" font-size="11" font-weight="700" fill="#000000">${code}</text></svg></td></tr></table>`;
+  
+  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;"><tr>${bars}</tr><tr><td colspan="100" style="text-align:center;padding-top:4px;font-family:'Courier New',monospace;font-size:10px;font-weight:700;color:#000;letter-spacing:2px;">${code}</td></tr></table>`;
 };
 
 // Generate routing barcode
 const generateRoutingBarcode = (pkg) => {
-  const routingCode = `(2L)${pkg.receiverCountry || 'US'}${Math.floor(Math.random() * 90000 + 10000)}+${Math.floor(Math.random() * 90000000 + 10000000)}`;
-  return generateBarcode(routingCode, 50);
+  const country = (pkg.receiverCountry || 'US').toUpperCase().substring(0, 2);
+  const routingCode = `(2L)${country}${Math.floor(Math.random() * 90000 + 10000)}+${Math.floor(Math.random() * 90000000 + 10000000)}`;
+  return generateBarcode(routingCode.replace(/[()+]/g, ''));
 };
 
 // Generate tracking barcode
 const generateTrackingBarcode = (trackingCode) => {
-  const formatted = `(J) ${trackingCode.replace(/(.{4})/g, '$1 ').trim()}`;
-  return generateBarcode(formatted, 60);
+  const clean = trackingCode.replace(/-/g, '').toUpperCase();
+  return generateBarcode(clean);
 };
 
 const sendEmail = async (to, subject, html, options = {}) => {
@@ -137,9 +162,9 @@ const sendEmail = async (to, subject, html, options = {}) => {
 
 const dhlStripe = () => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td height="4" style="height:4px;line-height:4px;font-size:4px;background:linear-gradient(to right,#D40511 0%,#D40511 33%,#FFCC00 33%,#FFCC00 66%,#D40511 66%,#D40511 100%);">&nbsp;</td></tr></table>`;
 
-const dhlHeader = () => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#FFFFFF;">${dhlStripe()}<tr><td style="padding:20px 40px;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>${DHL_LOGO_HTML}</td><td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:800;color:#FFFFFF;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,#D40511,#991B1B);padding:8px 18px;border-radius:2px;">EXPRESS</td></tr><tr><td colspan="2" style="font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#FFCC00;font-weight:700;letter-spacing:5px;text-transform:uppercase;padding-top:6px;">Express Delivery Services</td></tr></table></td></tr>${dhlStripe()}</table>`;
+const dhlHeader = () => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#FFCC00;">${dhlStripe()}<tr><td style="padding:16px 40px;background-color:#FFCC00;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td><img src="${DHL_LOGO_URL}" alt="DHL Express" width="140" height="auto" style="display:block;width:140px;height:auto;border:0;" /></td><td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:800;color:#FFFFFF;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(135deg,#D40511,#991B1B);padding:8px 18px;border-radius:2px;">EXPRESS</td></tr><tr><td colspan="2" style="font-family:Arial,Helvetica,sans-serif;font-size:9px;color:#D40511;font-weight:700;letter-spacing:5px;text-transform:uppercase;padding-top:6px;">Express Delivery Services</td></tr></table></td></tr>${dhlStripe()}</table>`;
 
-const dhlFooter = () => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background:linear-gradient(135deg,#1F2937,#111827);">${dhlStripe()}<tr><td style="padding:40px;text-align:center;font-family:Arial,Helvetica,sans-serif;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="text-align:center;padding-bottom:8px;">${DHL_LOGO_HTML.replace('font-size:36px','font-size:28px').replace('height:36px','height:28px')}</td></tr><tr><td style="font-size:10px;color:#9CA3AF;letter-spacing:4px;text-transform:uppercase;font-weight:700;text-align:center;padding-top:8px;">Express Worldwide</td></tr><tr><td style="padding:24px 0;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td height="1" style="height:1px;line-height:1px;font-size:1px;background:linear-gradient(to right,transparent,#374151,transparent);">&nbsp;</td></tr></table></td></tr><tr><td style="font-size:12px;color:#9CA3AF;line-height:2;text-align:center;">${COMPANY_ADDRESS}<br>Customer Service: <a href="mailto:${SUPPORT_EMAIL}" style="color:#D1D5DB;text-decoration:none;font-weight:600;">${SUPPORT_EMAIL}</a><br><a href="${FRONTEND_URL}/track" style="color:#D1D5DB;text-decoration:none;font-weight:600;">Track Shipment</a> &bull; <a href="${FRONTEND_URL}/support" style="color:#D1D5DB;text-decoration:none;font-weight:600;">Support</a> &bull; <a href="${FRONTEND_URL}/faq" style="color:#D1D5DB;text-decoration:none;font-weight:600;">FAQ</a></td></tr><tr><td style="padding-top:20px;text-align:center;"><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Privacy</a><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Terms</a><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Cookies</a><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Legal</a></td></tr><tr><td style="font-size:10px;color:#4B5563;padding-top:24px;line-height:1.8;text-align:center;">&copy; ${new Date().getFullYear()} DHL International GmbH. All rights reserved.<br>DHL is a division of the Deutsche Post DHL Group.<br><span style="color:#6B7280;">This is an automated notification. Please do not reply directly.<br>Replies monitored at: <a href="mailto:${REPLY_TO_EMAIL}" style="color:#FFCC00;text-decoration:none;font-weight:600;">${REPLY_TO_EMAIL}</a></span></td></tr></table></td></tr></table>`;
+const dhlFooter = () => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background:linear-gradient(135deg,#1F2937,#111827);">${dhlStripe()}<tr><td style="padding:40px;text-align:center;font-family:Arial,Helvetica,sans-serif;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="text-align:center;padding-bottom:8px;"><img src="${DHL_LOGO_URL}" alt="DHL Express" width="100" height="auto" style="display:block;width:100px;height:auto;margin:0 auto;border:0;" /></td></tr><tr><td style="font-size:10px;color:#9CA3AF;letter-spacing:4px;text-transform:uppercase;font-weight:700;text-align:center;padding-top:8px;">Express Worldwide</td></tr><tr><td style="padding:24px 0;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td height="1" style="height:1px;line-height:1px;font-size:1px;background:linear-gradient(to right,transparent,#374151,transparent);">&nbsp;</td></tr></table></td></tr><tr><td style="font-size:12px;color:#9CA3AF;line-height:2;text-align:center;">${COMPANY_ADDRESS}<br>Customer Service: <a href="mailto:${SUPPORT_EMAIL}" style="color:#D1D5DB;text-decoration:none;font-weight:600;">${SUPPORT_EMAIL}</a><br><a href="${FRONTEND_URL}/track" style="color:#D1D5DB;text-decoration:none;font-weight:600;">Track Shipment</a> &bull; <a href="${FRONTEND_URL}/support" style="color:#D1D5DB;text-decoration:none;font-weight:600;">Support</a> &bull; <a href="${FRONTEND_URL}/faq" style="color:#D1D5DB;text-decoration:none;font-weight:600;">FAQ</a></td></tr><tr><td style="padding-top:20px;text-align:center;"><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Privacy</a><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Terms</a><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Cookies</a><a href="#" style="color:#6B7280;text-decoration:none;font-size:10px;margin:0 12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Legal</a></td></tr><tr><td style="font-size:10px;color:#4B5563;padding-top:24px;line-height:1.8;text-align:center;">&copy; ${new Date().getFullYear()} DHL International GmbH. All rights reserved.<br>DHL is a division of the Deutsche Post DHL Group.<br><span style="color:#6B7280;">This is an automated notification. Please do not reply directly.<br>Replies monitored at: <a href="mailto:${REPLY_TO_EMAIL}" style="color:#FFCC00;text-decoration:none;font-weight:600;">${REPLY_TO_EMAIL}</a></span></td></tr></table></td></tr></table>`;
 
 const btnPrimary = (text, url) => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:16px auto;"><tr><td style="background:linear-gradient(135deg,#D40511,#991B1B);text-align:center;border-radius:3px;box-shadow:0 2px 8px rgba(212,5,17,0.3);"><a href="${url}" target="_blank" style="display:inline-block;padding:16px 48px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:800;color:#FFFFFF;text-decoration:none;letter-spacing:2px;text-transform:uppercase;">${text}</a></td></tr></table>`;
 
@@ -162,7 +187,11 @@ const twoCol = (items) => {
   return h;
 };
 const barcodeSection = (pkg) => {
-  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0;background:linear-gradient(135deg,#FAFAFA,#F3F4F6);border:1px solid #E5E7EB;"><tr><td style="padding:28px 32px;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:3px;padding-bottom:20px;text-align:center;">&#128196; Routing & Tracking Barcodes</td></tr><tr><td style="padding-bottom:16px;">${generateRoutingBarcode(pkg)}</td></tr><tr><td style="text-align:right;padding-bottom:20px;"><span style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#6B7280;font-weight:600;">Contents: FOR PERSONAL USE - DETAILED LIST ON COMMERCIAL INVOICE</span></td></tr><tr><td style="border-top:1px dashed #D1D5DB;padding-top:20px;">${generateTrackingBarcode(pkg.trackingCode)}</td></tr></table></td></tr></table>`;
+  const country = (pkg.receiverCountry || 'US').toUpperCase().substring(0, 2);
+  const routingCode = `(2L)${country}${Math.floor(Math.random() * 90000 + 10000)}+${Math.floor(Math.random() * 90000000 + 10000000)}`;
+  const trackingFormatted = `(J) ${pkg.trackingCode.replace(/(.{4})/g, '$1 ').trim()}`;
+  
+  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0;background:linear-gradient(135deg,#FAFAFA,#F3F4F6);border:1px solid #E5E7EB;"><tr><td style="padding:28px 32px;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:3px;padding-bottom:20px;text-align:center;">&#128196; Routing & Tracking Barcodes</td></tr><tr><td style="padding:16px;background-color:#FFFFFF;border:1px solid #D1D5DB;text-align:center;">${generateRoutingBarcode(pkg)}<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="text-align:center;padding-top:8px;font-family:'Courier New',monospace;font-size:11px;font-weight:700;color:#1F2937;letter-spacing:1px;">${routingCode}</td></tr></table></td></tr><tr><td style="text-align:right;padding:12px 0 16px;"><span style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#6B7280;font-weight:600;">Contents: FOR PERSONAL USE - DETAILED LIST ON COMMERCIAL INVOICE</span></td></tr><tr><td style="border-top:1px dashed #D1D5DB;padding-top:20px;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding:16px;background-color:#FFFFFF;border:1px solid #D1D5DB;text-align:center;">${generateTrackingBarcode(pkg.trackingCode)}<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="text-align:center;padding-top:8px;font-family:'Courier New',monospace;font-size:11px;font-weight:700;color:#1F2937;letter-spacing:1px;">${trackingFormatted}</td></tr></table></td></tr></table></td></tr></table></td></tr></table>`;
 };
 
 const waybillBox = (pkg) => {
@@ -226,6 +255,7 @@ const eventLogHtml = (events) => {
   h += `</table>`;
   return h;
 };
+
 const contactSection = () => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0;"><tr><td style="padding:28px 32px;background:linear-gradient(135deg,#F8FAFC,#F1F5F9);border:1px solid #E5E7EB;border-radius:6px;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:3px;padding-bottom:16px;text-align:center;">&#128222; Need Help?</td></tr><tr><td style="text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#374151;line-height:1.8;">Our Customer Service team is available <strong>24/7</strong> to assist you.<br><span style="color:#D40511;font-weight:700;">Email:</span> <a href="mailto:${SUPPORT_EMAIL}" style="color:#D40511;text-decoration:none;font-weight:700;">${SUPPORT_EMAIL}</a><br><span style="color:#D40511;font-weight:700;">Live Chat:</span> <a href="${FRONTEND_URL}/support" style="color:#D40511;text-decoration:none;font-weight:700;">dxti-delivery.onrender.com/support</a></td></tr></table></td></tr></table>`;
 
 const sendShipmentCreatedEmail = async (pkg) => {
@@ -303,6 +333,7 @@ ${dhlFooter()}
 
   return await sendEmail(pkg.receiverEmail, `DHL Status Update: ${meta.label} — ${pkg.trackingCode}`, html);
 };
+
 const sendPaymentReminderEmail = async (pkg) => {
   const trackingUrl = `${FRONTEND_URL}/track/${pkg.trackingCode}`;
   const greeting = getGreeting(pkg.receiverGender, pkg.receiverName);
