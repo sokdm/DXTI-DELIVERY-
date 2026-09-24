@@ -4,7 +4,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://dxti-delivery.onrender
 const REPLY_TO_EMAIL = 'dhld5736@gmail.com';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || REPLY_TO_EMAIL;
 const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM || SUPPORT_EMAIL;
-const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || process.env.EMAIL_FROM_NAME || 'DXTI Delivery';
+const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || process.env.EMAIL_FROM_NAME || 'DHL Express';
 const DHL_LOGO_URL = process.env.EMAIL_LOGO_URL || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/DHL_Logo.svg/512px-DHL_Logo.svg.png';
 
 const escapeHtml = (value = '') =>
