@@ -33,6 +33,12 @@ services:
         sync: false
       - key: SMTP_FROM_NAME
         sync: false
+      - key: SMTP_CONNECTION_TIMEOUT_MS
+        value: 10000
+      - key: SMTP_GREETING_TIMEOUT_MS
+        value: 10000
+      - key: SMTP_SOCKET_TIMEOUT_MS
+        value: 15000
       - key: EMAIL_LOGO_URL
         sync: false
       - key: SUPPORT_EMAIL

@@ -53,6 +53,7 @@ const Packages = () => {
   const [editLocationImage, setEditLocationImage] = useState(null);
   const [emailForm, setEmailForm] = useState({ subject: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [sendingReceiptId, setSendingReceiptId] = useState(null);
 
   useEffect(() => {
     fetchPackages();
@@ -182,7 +183,9 @@ const Packages = () => {
   };
 
   const handleSendReceipt = async (packageId) => {
+    if (sendingReceiptId) return;
     try {
+      setSendingReceiptId(packageId);
       const res = await axios.post(`${API_URL}/packages/${packageId}/receipt/email`, {}, {
         headers: getAuthHeaders(),
       });
@@ -190,6 +193,8 @@ const Packages = () => {
     } catch (error) {
       console.error('Send receipt error:', error);
       toast.error(error.response?.data?.message || 'Failed to send receipt');
+    } finally {
+      setSendingReceiptId(null);
     }
   };
 
@@ -472,10 +477,11 @@ const Packages = () => {
                         </button>
                         <button
                           onClick={() => handleSendReceipt(pkg._id)}
-                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                          disabled={sendingReceiptId === pkg._id}
+                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Send Receipt"
                         >
-                          <FileText className="w-5 h-5" />
+                          {sendingReceiptId === pkg._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
                         </button>
                         <button
                           onClick={() => openLocationModal(pkg)}

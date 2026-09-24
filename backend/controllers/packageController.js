@@ -9,6 +9,9 @@ const {
 } = require('../utils/emailService');
 const { generateReceiptHTML, generateReceiptPDF } = require('../utils/receiptService');
 
+const receiptEmailCooldowns = new Map();
+const RECEIPT_EMAIL_COOLDOWN_MS = 60 * 1000;
+
 exports.createPackage = async (req, res) => {
   try {
     console.log('📦 Creating package...');
@@ -638,9 +641,22 @@ exports.updatePackage = async (req, res) => {
 exports.sendReceiptEmail = async (req, res) => {
   try {
     const { id } = req.params;
+    const lastSentAt = receiptEmailCooldowns.get(id) || 0;
+    const waitMs = RECEIPT_EMAIL_COOLDOWN_MS - (Date.now() - lastSentAt);
+
+    if (waitMs > 0) {
+      return res.status(429).json({
+        success: false,
+        message: `Receipt email already requested. Please wait ${Math.ceil(waitMs / 1000)} seconds before trying again.`,
+      });
+    }
+
+    receiptEmailCooldowns.set(id, Date.now());
+
     const package = await Package.findById(id);
 
     if (!package) {
+      receiptEmailCooldowns.delete(id);
       return res.status(404).json({
         success: false,
         message: 'Package not found',
@@ -648,6 +664,7 @@ exports.sendReceiptEmail = async (req, res) => {
     }
 
     if (!isValidEmail(package.receiverEmail)) {
+      receiptEmailCooldowns.delete(id);
       return res.status(400).json({
         success: false,
         message: 'Receiver email is invalid',
@@ -683,9 +700,10 @@ exports.sendReceiptEmail = async (req, res) => {
     });
   } catch (error) {
     console.error('Send receipt email error:', error);
+    receiptEmailCooldowns.delete(req.params.id);
     res.status(500).json({
       success: false,
-      message: 'Failed to send receipt email',
+      message: error.message || 'Failed to send receipt email',
     });
   }
 };

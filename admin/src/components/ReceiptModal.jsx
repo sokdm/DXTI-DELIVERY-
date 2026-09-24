@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Printer, Download, MapPin, Package, User, Phone, Mail, Calendar, Shield, Truck, Send } from 'lucide-react';
+import { X, Printer, Download, MapPin, Package, User, Phone, Calendar, Shield, Truck, Send, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ReceiptModal = ({ isOpen, onClose, packageData }) => {
+  const [sendingReceipt, setSendingReceipt] = useState(false);
+
   if (!packageData) return null;
 
   const handlePrint = () => {
@@ -33,7 +35,9 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
   };
 
   const handleSendReceipt = async () => {
+    if (sendingReceipt) return;
     try {
+      setSendingReceipt(true);
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const token = localStorage.getItem('dxt_admin_token');
       const res = await fetch(`${API_URL}/packages/${packageData._id}/receipt/email`, {
@@ -45,6 +49,8 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
       toast.success(data.message || 'Receipt sent');
     } catch (err) {
       toast.error(err.message || 'Failed to send receipt');
+    } finally {
+      setSendingReceipt(false);
     }
   };
 
@@ -204,10 +210,11 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
                 </button>
                 <button
                   onClick={handleSendReceipt}
-                  className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-xs transition-all"
+                  disabled={sendingReceipt}
+                  className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  Send
+                  {sendingReceipt ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  {sendingReceipt ? 'Sending' : 'Send'}
                 </button>
               </div>
             </div>

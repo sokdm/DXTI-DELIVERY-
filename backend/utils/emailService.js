@@ -57,6 +57,9 @@ const mailTransporter = () => {
     host: SMTP_HOST,
     port: Number(SMTP_PORT),
     secure: String(SMTP_SECURE).toLowerCase() === 'true' || Number(SMTP_PORT) === 465,
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS) || 10000,
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS) || 10000,
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS) || 15000,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
@@ -174,14 +177,22 @@ const sendEmail = async (to, subject, html, options = {}) => {
     return { skipped: true, reason: 'SMTP credentials missing' };
   }
 
-  const info = await transporter.sendMail({
-    from: { address: SMTP_FROM_EMAIL, name: SMTP_FROM_NAME },
-    to,
-    subject,
-    html,
-    replyTo: REPLY_TO_EMAIL,
-    attachments: options.attachments,
-  });
+  let info;
+  try {
+    info = await transporter.sendMail({
+      from: { address: SMTP_FROM_EMAIL, name: SMTP_FROM_NAME },
+      to,
+      subject,
+      html,
+      replyTo: REPLY_TO_EMAIL,
+      attachments: options.attachments,
+    });
+  } catch (error) {
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNECTION') {
+      throw new Error('SMTP connection timed out. Check SMTP host, port, secure setting, and provider access.');
+    }
+    throw error;
+  }
 
   console.log('Email sent to', to, '| Subject:', subject, '| Message:', info.messageId);
   return { success: true, messageId: info.messageId };
