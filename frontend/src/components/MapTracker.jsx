@@ -172,6 +172,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
   const [showArrivedPopup, setShowArrivedPopup] = useState(false);
   const [showStoppedPopup, setShowStoppedPopup] = useState(false);
   const [showCountryInfo, setShowCountryInfo] = useState(false);
+  const [locationImageOpen, setLocationImageOpen] = useState(false);
   const animationRef = useRef(null);
   const autoMoveRef = useRef(null);
 
@@ -182,6 +183,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
   const currentName = getLocationName(currentLocation) || 'Current';
   const destName = getLocationName(destination) || 'Destination';
   const originName = getLocationName(origin) || 'Origin';
+  const currentLocationImage = currentLocation?.image || currentLocation?.imageUrl;
 
   // Calculate distance and estimated time
   const distanceKm = useMemo(() => {
@@ -327,9 +329,15 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
     return null;
   }, [currentCoords, destCoords]);
 
-  // Path points - only show route line when in_transit or stopped, NOT when arrived/delivered/pending
+  // Path points - show remaining line while moving and completed line once arrived/delivered.
   const pathPoints = useMemo(() => {
-    if (isArrived || isDelivered || isPending) return [];
+    if (isPending) return [];
+    if ((isArrived || isDelivered) && originCoords && destCoords) {
+      return [
+        [originCoords.lat, originCoords.lng],
+        [destCoords.lat, destCoords.lng],
+      ];
+    }
     if (planePosition && destCoords) {
       return [
         planePosition,
@@ -337,7 +345,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
       ];
     }
     return [];
-  }, [planePosition, destCoords, isArrived, isDelivered, isPending]);
+  }, [planePosition, originCoords, destCoords, isArrived, isDelivered, isPending]);
 
   // Get country and city from location name
   const getCountryFromLocation = (locName) => {
@@ -444,7 +452,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
           {pathPoints.length > 0 && (
             <Polyline
               positions={pathPoints}
-              color={isStopped ? '#D40511' : '#0ea5e9'}
+              color={isStopped ? '#D40511' : isArrived || isDelivered ? '#10b981' : '#0ea5e9'}
               weight={5}
               opacity={0.9}
               dashArray={isStopped ? '10, 10' : null}
@@ -466,6 +474,22 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
                 <p className="text-dhl-gray-600 mb-2">
                   {isArrived || isDelivered ? destName : currentName}
                 </p>
+                {currentLocationImage && !isArrived && !isDelivered && (
+                  <button
+                    type="button"
+                    onClick={() => setLocationImageOpen(true)}
+                    className="w-full mb-2 overflow-hidden rounded-sm border border-dhl-yellow/40 text-left"
+                  >
+                    <img
+                      src={currentLocationImage}
+                      alt={currentName}
+                      className="h-28 w-full object-cover"
+                    />
+                    <span className="block bg-dhl-yellow px-3 py-2 text-xs font-black uppercase tracking-wider text-dhl-black">
+                      View current location photo
+                    </span>
+                  </button>
+                )}
                 {isInTransit && (
                   <div className="bg-dhl-yellow/10 rounded-sm p-2 mt-2">
                     <p className="text-dhl-yellow text-sm font-bold">⏱️ ETA: {estimatedTime}</p>
@@ -504,6 +528,18 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
                   <p className="text-xs text-dhl-gray-400 mt-2">
                     Stopped at: {currentCoords.lat?.toFixed(4)}, {currentCoords.lng?.toFixed(4)}
                   </p>
+                  {currentLocationImage && (
+                    <button
+                      type="button"
+                      onClick={() => setLocationImageOpen(true)}
+                      className="mt-3 w-full overflow-hidden rounded-sm border border-dhl-red/30 text-left"
+                    >
+                      <img src={currentLocationImage} alt={currentName} className="h-28 w-full object-cover" />
+                      <span className="block bg-dhl-red px-3 py-2 text-xs font-black uppercase tracking-wider text-white">
+                        View current location photo
+                      </span>
+                    </button>
+                  )}
                 </div>
               </Popup>
             </Marker>
@@ -531,6 +567,36 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
             </Popup>
           </Marker>
         </MapContainer>
+
+        <AnimatePresence>
+          {locationImageOpen && currentLocationImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[1400] flex items-center justify-center bg-black/90 p-4"
+              onClick={() => setLocationImageOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setLocationImageOpen(false)}
+                className="absolute right-4 top-4 rounded-sm bg-dhl-yellow px-4 py-2 text-sm font-black uppercase tracking-wider text-dhl-black"
+              >
+                Close
+              </button>
+              <div className="max-h-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+                <img
+                  src={currentLocationImage}
+                  alt={currentName}
+                  className="max-h-[78vh] w-full rounded-sm object-contain"
+                />
+                <div className="bg-white p-3 text-sm font-bold text-dhl-black">
+                  {currentName}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Status Badge */}
         <div className="absolute top-4 right-4 z-[1000]">

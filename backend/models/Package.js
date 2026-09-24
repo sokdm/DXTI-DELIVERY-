@@ -44,6 +44,8 @@ const packageSchema = new mongoose.Schema({
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
     locationName: { type: String, required: true },
+    image: { type: String },
+    imagePublicId: { type: String },
   },
   destinationLocation: {
     lat: { type: Number, required: true },

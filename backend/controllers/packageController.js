@@ -255,8 +255,26 @@ exports.updateStatus = async (req, res) => {
     } else if (status === 'in_transit') {
       updateData.$set.movementProgress = 0;
       updateData.$set.lastMovementUpdate = Date.now();
+    } else if (status === 'arrived') {
+      updateData.$set.movementProgress = 1;
+      updateData.$set.currentLocation = {
+        lat: existingPackage.destinationLocation.lat,
+        lng: existingPackage.destinationLocation.lng,
+        locationName: existingPackage.destinationLocation.locationName,
+        ...(existingPackage.currentLocation?.image ? { image: existingPackage.currentLocation.image } : {}),
+        ...(existingPackage.currentLocation?.imagePublicId ? { imagePublicId: existingPackage.currentLocation.imagePublicId } : {}),
+      };
+      updateData.$push.statusHistory.location = existingPackage.destinationLocation.locationName;
     } else if (status === 'delivered') {
       updateData.$set.movementProgress = 1;
+      updateData.$set.currentLocation = {
+        lat: existingPackage.destinationLocation.lat,
+        lng: existingPackage.destinationLocation.lng,
+        locationName: existingPackage.destinationLocation.locationName,
+        ...(existingPackage.currentLocation?.image ? { image: existingPackage.currentLocation.image } : {}),
+        ...(existingPackage.currentLocation?.imagePublicId ? { imagePublicId: existingPackage.currentLocation.imagePublicId } : {}),
+      };
+      updateData.$push.statusHistory.location = existingPackage.destinationLocation.locationName;
     }
 
     const package = await Package.findByIdAndUpdate(
@@ -432,20 +450,38 @@ exports.updateLocation = async (req, res) => {
       });
     }
 
+    const existingPackage = await Package.findById(id);
+    if (!existingPackage) {
+      if (req.file?.filename) {
+        try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+      }
+      return res.status(404).json({
+        success: false,
+        message: 'Package not found',
+      });
+    }
+
+    const setData = {
+      'currentLocation.lat': parseFloat(lat),
+      'currentLocation.lng': parseFloat(lng),
+      'currentLocation.locationName': locationName || 'Manual Update',
+      updatedAt: Date.now(),
+    };
+
+    if (req.file) {
+      setData['currentLocation.image'] = req.file.path;
+      setData['currentLocation.imagePublicId'] = req.file.filename;
+    }
+
     const package = await Package.findByIdAndUpdate(
       id,
       {
-        $set: {
-          'currentLocation.lat': parseFloat(lat),
-          'currentLocation.lng': parseFloat(lng),
-          'currentLocation.locationName': locationName || 'Manual Update',
-          updatedAt: Date.now(),
-        },
+        $set: setData,
         $push: {
           statusHistory: {
             status: 'location_updated',
             location: locationName || 'Manual Update',
-            description: 'Current location updated',
+            description: req.file ? 'Current location updated with photo' : 'Current location updated',
             timestamp: new Date(),
           },
         },
@@ -453,11 +489,8 @@ exports.updateLocation = async (req, res) => {
       { new: true }
     );
 
-    if (!package) {
-      return res.status(404).json({
-        success: false,
-        message: 'Package not found',
-      });
+    if (req.file && existingPackage.currentLocation?.imagePublicId) {
+      try { await cloudinary.uploader.destroy(existingPackage.currentLocation.imagePublicId); } catch (e) {}
     }
 
     res.status(200).json({
@@ -466,6 +499,9 @@ exports.updateLocation = async (req, res) => {
       data: package,
     });
   } catch (error) {
+    if (req.file?.filename) {
+      try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+    }
     res.status(500).json({
       success: false,
       message: 'Error updating location',
@@ -479,11 +515,13 @@ exports.updateLocation = async (req, res) => {
 exports.updatePackage = async (req, res) => {
   try {
     const { id } = req.params;
+    const packageImageFile = req.files?.packageImage?.[0];
+    const locationImageFile = req.files?.locationImage?.[0];
     const pkg = await Package.findById(id);
 
     if (!pkg) {
-      if (req.file?.filename) {
-        try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+      for (const file of [packageImageFile, locationImageFile].filter(Boolean)) {
+        try { await cloudinary.uploader.destroy(file.filename); } catch (e) {}
       }
       return res.status(404).json({ success: false, message: 'Package not found' });
     }
@@ -561,24 +599,35 @@ exports.updatePackage = async (req, res) => {
           lat: Number(value.lat),
           lng: Number(value.lng),
           locationName: String(value.locationName || 'Updated location').trim(),
+          ...(pkg[field]?.image ? { image: pkg[field].image } : {}),
+          ...(pkg[field]?.imagePublicId ? { imagePublicId: pkg[field].imagePublicId } : {}),
         };
       }
     });
 
-    if (req.file) {
+    if (packageImageFile) {
       const oldPublicId = pkg.packageImagePublicId;
-      pkg.packageImage = req.file.path;
-      pkg.packageImagePublicId = req.file.filename;
+      pkg.packageImage = packageImageFile.path;
+      pkg.packageImagePublicId = packageImageFile.filename;
       if (oldPublicId) {
         try { await cloudinary.uploader.destroy(oldPublicId); } catch (e) {}
+      }
+    }
+
+    if (locationImageFile) {
+      const oldLocationPublicId = pkg.currentLocation?.imagePublicId;
+      pkg.currentLocation.image = locationImageFile.path;
+      pkg.currentLocation.imagePublicId = locationImageFile.filename;
+      if (oldLocationPublicId) {
+        try { await cloudinary.uploader.destroy(oldLocationPublicId); } catch (e) {}
       }
     }
 
     await pkg.save();
     res.json({ success: true, message: 'Package updated successfully', data: pkg });
   } catch (error) {
-    if (req.file?.filename) {
-      try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+    for (const file of [req.files?.packageImage?.[0], req.files?.locationImage?.[0]].filter(Boolean)) {
+      try { await cloudinary.uploader.destroy(file.filename); } catch (e) {}
     }
     console.error('Package update error:', error);
     res.status(400).json({ success: false, message: error.message || 'Error updating package' });

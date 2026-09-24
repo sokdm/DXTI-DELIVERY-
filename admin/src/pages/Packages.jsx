@@ -46,8 +46,10 @@ const Packages = () => {
   const [newStatus, setNewStatus] = useState('');
   const [stopReason, setStopReason] = useState('');
   const [locationForm, setLocationForm] = useState({ lat: '', lng: '', locationName: '' });
+  const [locationImage, setLocationImage] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editImage, setEditImage] = useState(null);
+  const [editLocationImage, setEditLocationImage] = useState(null);
   const [emailForm, setEmailForm] = useState({ subject: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -117,17 +119,23 @@ const Packages = () => {
 
   const handleUpdateLocation = async () => {
     try {
-      await axios.patch(`${API_URL}/packages/${selectedPackage._id}/location`, {
-        lat: parseFloat(locationForm.lat),
-        lng: parseFloat(locationForm.lng),
-        locationName: locationForm.locationName,
-      }, {
-        headers: getAuthHeaders()
+      const data = new FormData();
+      data.append('lat', locationForm.lat);
+      data.append('lng', locationForm.lng);
+      data.append('locationName', locationForm.locationName);
+      if (locationImage) data.append('locationImage', locationImage);
+
+      await axios.patch(`${API_URL}/packages/${selectedPackage._id}/location`, data, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('dxt_admin_token')}`,
+          'Content-Type': 'multipart/form-data',
+        },
       });
       toast.success('Location updated successfully');
       setShowLocationModal(false);
       setSelectedPackage(null);
       setLocationForm({ lat: '', lng: '', locationName: '' });
+      setLocationImage(null);
       fetchPackages();
     } catch (error) {
       console.error('Location update error:', error);
@@ -168,6 +176,7 @@ const Packages = () => {
       lng: pkg.currentLocation?.lng || '',
       locationName: pkg.currentLocation?.locationName || '',
     });
+    setLocationImage(null);
     setShowLocationModal(true);
   };
 
@@ -202,6 +211,7 @@ const Packages = () => {
       destinationLocationName: pkg.destinationLocation?.locationName || '',
     });
     setEditImage(null);
+    setEditLocationImage(null);
     setShowEditModal(true);
   };
 
@@ -231,6 +241,7 @@ const Packages = () => {
         locationName: editForm.destinationLocationName,
       }));
       if (editImage) data.append('packageImage', editImage);
+      if (editLocationImage) data.append('locationImage', editLocationImage);
 
       await axios.patch(`${API_URL}/packages/${selectedPackage._id}`, data, {
         headers: {
@@ -639,6 +650,22 @@ const Packages = () => {
                     placeholder="e.g., New York Distribution Center"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Current Location Photo
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setLocationImage(e.target.files?.[0] || null)}
+                    className="admin-input"
+                  />
+                  {selectedPackage.currentLocation?.image && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      Uploading a new photo will replace the existing current-location image.
+                    </p>
+                  )}
+                </div>
 
                 <div className="flex gap-4 pt-4">
                   <button
@@ -742,6 +769,10 @@ const Packages = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Replace Image</label>
                   <input type="file" accept="image/*" onChange={(e) => setEditImage(e.target.files?.[0] || null)} className="admin-input" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Current Location Photo</label>
+                  <input type="file" accept="image/*" onChange={(e) => setEditLocationImage(e.target.files?.[0] || null)} className="admin-input" />
                 </div>
                 <div className="md:col-span-3">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Description</label>

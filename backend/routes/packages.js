@@ -24,8 +24,11 @@ router.get('/stats/dashboard', auth, getDashboardStats);
 router.get('/:id/receipt', auth, getReceipt);
 router.get('/:id/receipt/pdf', auth, downloadReceiptPDF);
 router.patch('/:id/status', auth, updateStatus);
-router.patch('/:id/location', auth, updateLocation);
-router.patch('/:id', auth, upload.single('packageImage'), handleUploadError, updatePackage);
+router.patch('/:id/location', auth, upload.single('locationImage'), handleUploadError, updateLocation);
+router.patch('/:id', auth, upload.fields([
+  { name: 'packageImage', maxCount: 1 },
+  { name: 'locationImage', maxCount: 1 },
+]), handleUploadError, updatePackage);
 router.post('/:id/send-email', auth, sendCustomEmail);
 router.post('/:id/resend-email', auth, resendEmail);
 router.delete('/:id', auth, deletePackage);

@@ -94,7 +94,9 @@ const TrackingResult = ({ packageData }) => {
   const currentLocation = packageData.currentLocation;
   const destination = packageData.destinationLocation;
 
-  const progress = (packageData.movementProgress !== undefined ? packageData.movementProgress * 100 : config.progress);
+  const progress = ['arrived', 'delivered'].includes(status)
+    ? 100
+    : (packageData.movementProgress !== undefined ? packageData.movementProgress * 100 : config.progress);
 
   const originName = getLocationName(currentLocation) || 'Origin';
   const destName = getLocationName(destination) || 'Destination';
