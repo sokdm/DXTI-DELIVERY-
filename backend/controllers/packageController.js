@@ -11,6 +11,8 @@ const { generateReceiptHTML, generateReceiptPDF } = require('../utils/receiptSer
 
 const receiptEmailCooldowns = new Map();
 const RECEIPT_EMAIL_COOLDOWN_MS = 60 * 1000;
+const resendEmailCooldowns = new Map();
+const RESEND_EMAIL_COOLDOWN_MS = 60 * 1000;
 
 exports.createPackage = async (req, res) => {
   try {
@@ -739,12 +741,27 @@ exports.sendCustomEmail = async (req, res) => {
 
 exports.resendEmail = async (req, res) => {
   try {
+    const { id } = req.params;
+    const lastSentAt = resendEmailCooldowns.get(id) || 0;
+    const waitMs = RESEND_EMAIL_COOLDOWN_MS - (Date.now() - lastSentAt);
+
+    if (waitMs > 0) {
+      return res.status(429).json({
+        success: false,
+        message: `Email resend already requested. Please wait ${Math.ceil(waitMs / 1000)} seconds before trying again.`,
+      });
+    }
+
+    resendEmailCooldowns.set(id, Date.now());
+
     const pkg = await Package.findById(req.params.id);
     if (!pkg) {
+      resendEmailCooldowns.delete(id);
       return res.status(404).json({ success: false, message: 'Package not found' });
     }
 
     if (!pkg.receiverEmail) {
+      resendEmailCooldowns.delete(id);
       return res.status(400).json({ success: false, message: 'No receiver email found for this package' });
     }
 
@@ -762,6 +779,7 @@ exports.resendEmail = async (req, res) => {
     });
   } catch (error) {
     console.error('Resend email error:', error);
+    resendEmailCooldowns.delete(req.params.id);
 
     try {
       const pkg = await Package.findById(req.params.id);
@@ -777,7 +795,7 @@ exports.resendEmail = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Failed to resend email. Check SMTP configuration.'
+      message: error.message || 'Failed to resend email. Check SMTP configuration.'
     });
   }
 };

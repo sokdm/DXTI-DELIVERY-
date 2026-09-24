@@ -75,10 +75,16 @@ app.get('/api/debug/env', (req, res) => {
     frontend_url: process.env.FRONTEND_URL,
     admin_url: process.env.ADMIN_URL,
     smtp_host_set: !!process.env.SMTP_HOST,
+    smtp_host: process.env.SMTP_HOST || null,
     smtp_port_set: !!process.env.SMTP_PORT,
+    smtp_port: process.env.SMTP_PORT || null,
+    smtp_secure: process.env.SMTP_SECURE || null,
     smtp_user_set: !!process.env.SMTP_USER,
     smtp_pass_set: !!process.env.SMTP_PASS,
     smtp_from_email_set: !!process.env.SMTP_FROM_EMAIL,
+    smtp_connection_timeout_ms: process.env.SMTP_CONNECTION_TIMEOUT_MS || '10000',
+    smtp_greeting_timeout_ms: process.env.SMTP_GREETING_TIMEOUT_MS || '10000',
+    smtp_socket_timeout_ms: process.env.SMTP_SOCKET_TIMEOUT_MS || '15000',
   });
 });
 
