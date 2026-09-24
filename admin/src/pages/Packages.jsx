@@ -16,6 +16,7 @@ import {
   Edit3,
   Mail,
   Send,
+  FileText,
   Loader2
 } from 'lucide-react';
 import axios from 'axios';
@@ -178,6 +179,18 @@ const Packages = () => {
     });
     setLocationImage(null);
     setShowLocationModal(true);
+  };
+
+  const handleSendReceipt = async (packageId) => {
+    try {
+      const res = await axios.post(`${API_URL}/packages/${packageId}/receipt/email`, {}, {
+        headers: getAuthHeaders(),
+      });
+      toast.success(res.data.message || 'Receipt sent');
+    } catch (error) {
+      console.error('Send receipt error:', error);
+      toast.error(error.response?.data?.message || 'Failed to send receipt');
+    }
   };
 
   const openEditModal = (pkg) => {
@@ -456,6 +469,13 @@ const Packages = () => {
                           title="Download PDF"
                         >
                           <Download className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleSendReceipt(pkg._id)}
+                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                          title="Send Receipt"
+                        >
+                          <FileText className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => openLocationModal(pkg)}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Printer, Download, MapPin, Package, User, Phone, Mail, DollarSign, Calendar, Shield, Truck } from 'lucide-react';
+import { X, Printer, Download, MapPin, Package, User, Phone, Mail, Calendar, Shield, Truck, Send } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const ReceiptModal = ({ isOpen, onClose, packageData }) => {
   if (!packageData) return null;
@@ -13,7 +14,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
   const handleDownloadPDF = async () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('dxt_admin_token');
       const res = await fetch(`${API_URL}/packages/${packageData._id}/receipt/pdf`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -28,6 +29,22 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       alert('Failed to download PDF');
+    }
+  };
+
+  const handleSendReceipt = async () => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('dxt_admin_token');
+      const res = await fetch(`${API_URL}/packages/${packageData._id}/receipt/email`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send receipt');
+      toast.success(data.message || 'Receipt sent');
+    } catch (err) {
+      toast.error(err.message || 'Failed to send receipt');
     }
   };
 
@@ -170,20 +187,27 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
 
             {/* Footer Buttons - Sticky */}
             <div className="bg-slate-50 px-5 py-4 border-t border-slate-200 shrink-0">
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={handlePrint}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-[#D40511] hover:bg-[#B0040E] text-white py-2.5 rounded-xl font-bold text-xs transition-all"
+                  className="flex items-center justify-center gap-1.5 bg-[#D40511] hover:bg-[#B0040E] text-white py-2.5 rounded-xl font-bold text-xs transition-all"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   Print
                 </button>
                 <button
                   onClick={handleDownloadPDF}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-[#1f2937] hover:bg-black text-white py-2.5 rounded-xl font-bold text-xs transition-all"
+                  className="flex items-center justify-center gap-1.5 bg-[#1f2937] hover:bg-black text-white py-2.5 rounded-xl font-bold text-xs transition-all"
                 >
                   <Download className="w-3.5 h-3.5" />
                   PDF
+                </button>
+                <button
+                  onClick={handleSendReceipt}
+                  className="flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-xs transition-all"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Send
                 </button>
               </div>
             </div>

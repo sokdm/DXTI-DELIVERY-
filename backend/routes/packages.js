@@ -9,6 +9,7 @@ const {
   getDashboardStats,
   getReceipt,
   downloadReceiptPDF,
+  sendReceiptEmail,
   updateLocation,
   updatePackage,
   sendCustomEmail,
@@ -23,6 +24,7 @@ router.get('/', auth, getAllPackages);
 router.get('/stats/dashboard', auth, getDashboardStats);
 router.get('/:id/receipt', auth, getReceipt);
 router.get('/:id/receipt/pdf', auth, downloadReceiptPDF);
+router.post('/:id/receipt/email', auth, sendReceiptEmail);
 router.patch('/:id/status', auth, updateStatus);
 router.patch('/:id/location', auth, upload.single('locationImage'), handleUploadError, updateLocation);
 router.patch('/:id', auth, upload.fields([

@@ -4,6 +4,7 @@ const {
   sendShipmentCreatedEmail,
   sendStatusUpdateEmail,
   sendCustomPackageEmail,
+  sendEmail,
   isValidEmail,
 } = require('../utils/emailService');
 const { generateReceiptHTML, generateReceiptPDF } = require('../utils/receiptService');
@@ -631,6 +632,61 @@ exports.updatePackage = async (req, res) => {
     }
     console.error('Package update error:', error);
     res.status(400).json({ success: false, message: error.message || 'Error updating package' });
+  }
+};
+
+exports.sendReceiptEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const package = await Package.findById(id);
+
+    if (!package) {
+      return res.status(404).json({
+        success: false,
+        message: 'Package not found',
+      });
+    }
+
+    if (!isValidEmail(package.receiverEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Receiver email is invalid',
+      });
+    }
+
+    const pdfBuffer = await generateReceiptPDF(package);
+    const html = `
+      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#111827;">
+        <div style="background:#FFCC00;padding:18px 22px;border-top:6px solid #D40511;">
+          <strong style="font-size:24px;color:#D40511;letter-spacing:4px;">DHL</strong>
+        </div>
+        <div style="padding:22px;border:1px solid #e5e7eb;border-top:0;">
+          <h2 style="margin:0 0 10px;color:#111827;">Shipment receipt attached</h2>
+          <p>Hello ${package.receiverName || 'there'},</p>
+          <p>Your DHL-styled shipment receipt for tracking number <strong>${package.trackingCode}</strong> is attached as a PDF.</p>
+          <p style="margin-top:18px;">Support: <a href="mailto:dhld5736@gmail.com">dhld5736@gmail.com</a></p>
+        </div>
+      </div>
+    `;
+
+    await sendEmail(package.receiverEmail, `Shipment receipt - ${package.trackingCode}`, html, {
+      attachments: [{
+        filename: `DHL-Receipt-${package.trackingCode}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      }],
+    });
+
+    res.json({
+      success: true,
+      message: `Receipt sent successfully to ${package.receiverEmail}`,
+    });
+  } catch (error) {
+    console.error('Send receipt email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send receipt email',
+    });
   }
 };
 
