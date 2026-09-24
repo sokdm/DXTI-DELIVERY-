@@ -58,6 +58,12 @@ const packageSchema = new mongoose.Schema({
   stopReason: { type: String },
   movementProgress: { type: Number, default: 0, min: 0, max: 1 },
   lastMovementUpdate: { type: Date, default: Date.now },
+  statusHistory: [{
+    status: { type: String },
+    location: { type: String },
+    description: { type: String },
+    timestamp: { type: Date, default: Date.now },
+  }],
 
   // ─── Email Tracking ──────────────────────────────────────────
   emailSent: { type: Boolean, default: false },

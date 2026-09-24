@@ -98,7 +98,7 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Resend email error:', error);
-      toast.error(error.response?.data?.message || 'Failed to resend email. Check SendGrid configuration.');
+      toast.error(error.response?.data?.message || 'Failed to resend email. Check SMTP configuration.');
     } finally {
       setResendingEmail(prev => ({ ...prev, [pkg._id]: false }));
     }

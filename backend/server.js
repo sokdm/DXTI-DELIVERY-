@@ -74,9 +74,11 @@ app.get('/api/debug/env', (req, res) => {
     jwt_set: !!process.env.JWT_SECRET,
     frontend_url: process.env.FRONTEND_URL,
     admin_url: process.env.ADMIN_URL,
-    brevo_key_set: !!process.env.BREVO_API_KEY,
-    brevo_key_length: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.length : 0,
-    email_from: process.env.EMAIL_FROM,
+    smtp_host_set: !!process.env.SMTP_HOST,
+    smtp_port_set: !!process.env.SMTP_PORT,
+    smtp_user_set: !!process.env.SMTP_USER,
+    smtp_pass_set: !!process.env.SMTP_PASS,
+    smtp_from_email_set: !!process.env.SMTP_FROM_EMAIL,
   });
 });
 

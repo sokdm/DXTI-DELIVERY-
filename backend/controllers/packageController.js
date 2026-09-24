@@ -1,6 +1,11 @@
 const Package = require('../models/Package');
 const { cloudinary } = require('../config/cloudinary');
-const { sendShipmentCreatedEmail, sendStatusUpdateEmail } = require('../utils/emailService');
+const {
+  sendShipmentCreatedEmail,
+  sendStatusUpdateEmail,
+  sendCustomPackageEmail,
+  isValidEmail,
+} = require('../utils/emailService');
 const { generateReceiptHTML, generateReceiptPDF } = require('../utils/receiptService');
 
 exports.createPackage = async (req, res) => {
@@ -78,6 +83,12 @@ exports.createPackage = async (req, res) => {
       currentLocation: currentLocation,
       destinationLocation: destinationLocation,
       status: 'pending',
+      statusHistory: [{
+        status: 'pending',
+        location: currentLocation.locationName,
+        description: 'Package created',
+        timestamp: new Date(),
+      }],
       emailStatus: 'pending',
     });
 
@@ -224,15 +235,28 @@ exports.updateStatus = async (req, res) => {
 
     const oldStatus = existingPackage.status;
 
-    const updateData = { status, updatedAt: Date.now() };
+    const updateData = {
+      $set: {
+        status,
+        updatedAt: Date.now(),
+      },
+      $push: {
+        statusHistory: {
+          status,
+          location: existingPackage.currentLocation?.locationName,
+          description: status === 'stopped' ? stopReason : `Status updated to ${status.replace('_', ' ')}`,
+          timestamp: new Date(),
+        },
+      },
+    };
 
     if (status === 'stopped') {
-      updateData.stopReason = stopReason;
+      updateData.$set.stopReason = stopReason;
     } else if (status === 'in_transit') {
-      updateData.movementProgress = 0;
-      updateData.lastMovementUpdate = Date.now();
+      updateData.$set.movementProgress = 0;
+      updateData.$set.lastMovementUpdate = Date.now();
     } else if (status === 'delivered') {
-      updateData.movementProgress = 1;
+      updateData.$set.movementProgress = 1;
     }
 
     const package = await Package.findByIdAndUpdate(
@@ -411,10 +435,20 @@ exports.updateLocation = async (req, res) => {
     const package = await Package.findByIdAndUpdate(
       id,
       {
-        'currentLocation.lat': parseFloat(lat),
-        'currentLocation.lng': parseFloat(lng),
-        'currentLocation.locationName': locationName || 'Manual Update',
-        updatedAt: Date.now(),
+        $set: {
+          'currentLocation.lat': parseFloat(lat),
+          'currentLocation.lng': parseFloat(lng),
+          'currentLocation.locationName': locationName || 'Manual Update',
+          updatedAt: Date.now(),
+        },
+        $push: {
+          statusHistory: {
+            status: 'location_updated',
+            location: locationName || 'Manual Update',
+            description: 'Current location updated',
+            timestamp: new Date(),
+          },
+        },
       },
       { new: true }
     );
@@ -441,6 +475,144 @@ exports.updateLocation = async (req, res) => {
 };
 
 // ─── Resend Email ───────────────────────────────────────────────────────────
+
+exports.updatePackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pkg = await Package.findById(id);
+
+    if (!pkg) {
+      if (req.file?.filename) {
+        try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+      }
+      return res.status(404).json({ success: false, message: 'Package not found' });
+    }
+
+    const editableTextFields = [
+      'packageName',
+      'packageDescription',
+      'senderName',
+      'senderPhone',
+      'senderEmail',
+      'senderAddress',
+      'senderCountry',
+      'senderCity',
+      'receiverName',
+      'receiverPhone',
+      'receiverEmail',
+      'receiverAddress',
+      'receiverCountry',
+      'receiverCity',
+      'receiverGender',
+      'stopReason',
+    ];
+
+    editableTextFields.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, field) && req.body[field] !== '') {
+        pkg[field] = String(req.body[field]).trim();
+      }
+    });
+
+    if (req.body.trackingCode && req.body.trackingCode !== pkg.trackingCode) {
+      const nextCode = String(req.body.trackingCode).trim().toUpperCase();
+      const existing = await Package.findOne({ trackingCode: nextCode, _id: { $ne: id } });
+      if (existing) {
+        return res.status(409).json({ success: false, message: 'Tracking code is already in use' });
+      }
+      pkg.trackingCode = nextCode;
+    }
+
+    if (req.body.packageWeight !== undefined && req.body.packageWeight !== '') {
+      const weight = parseFloat(req.body.packageWeight);
+      if (Number.isNaN(weight) || weight <= 0) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid package weight' });
+      }
+      pkg.packageWeight = weight;
+    }
+
+    if (req.body.deliveryPrice !== undefined && req.body.deliveryPrice !== '') {
+      const price = parseFloat(req.body.deliveryPrice);
+      if (Number.isNaN(price) || price < 0) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid delivery price' });
+      }
+      pkg.deliveryPrice = price;
+    }
+
+    if (req.body.status !== undefined && req.body.status !== '') {
+      const validStatuses = ['pending', 'in_transit', 'arrived', 'delivered', 'stopped'];
+      if (!validStatuses.includes(req.body.status)) {
+        return res.status(400).json({ success: false, message: 'Invalid status' });
+      }
+      pkg.status = req.body.status;
+      if (pkg.status === 'delivered') pkg.movementProgress = 1;
+      if (pkg.status === 'in_transit' && !pkg.movementProgress) {
+        pkg.movementProgress = 0;
+        pkg.lastMovementUpdate = new Date();
+      }
+    }
+
+    ['currentLocation', 'destinationLocation'].forEach((field) => {
+      if (req.body[field]) {
+        const value = typeof req.body[field] === 'string' ? JSON.parse(req.body[field]) : req.body[field];
+        if (!Number.isFinite(Number(value.lat)) || !Number.isFinite(Number(value.lng))) {
+          throw new Error(`Invalid ${field} coordinates`);
+        }
+        pkg[field] = {
+          lat: Number(value.lat),
+          lng: Number(value.lng),
+          locationName: String(value.locationName || 'Updated location').trim(),
+        };
+      }
+    });
+
+    if (req.file) {
+      const oldPublicId = pkg.packageImagePublicId;
+      pkg.packageImage = req.file.path;
+      pkg.packageImagePublicId = req.file.filename;
+      if (oldPublicId) {
+        try { await cloudinary.uploader.destroy(oldPublicId); } catch (e) {}
+      }
+    }
+
+    await pkg.save();
+    res.json({ success: true, message: 'Package updated successfully', data: pkg });
+  } catch (error) {
+    if (req.file?.filename) {
+      try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
+    }
+    console.error('Package update error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Error updating package' });
+  }
+};
+
+exports.sendCustomEmail = async (req, res) => {
+  try {
+    const pkg = await Package.findById(req.params.id);
+    if (!pkg) {
+      return res.status(404).json({ success: false, message: 'Package not found' });
+    }
+
+    const subject = String(req.body.subject || '').trim();
+    const message = String(req.body.message || '').trim();
+
+    if (!isValidEmail(pkg.receiverEmail)) {
+      return res.status(400).json({ success: false, message: 'Receiver email is invalid' });
+    }
+    if (subject.length < 3 || subject.length > 140) {
+      return res.status(400).json({ success: false, message: 'Subject must be between 3 and 140 characters' });
+    }
+    if (message.length < 5 || message.length > 4000) {
+      return res.status(400).json({ success: false, message: 'Message must be between 5 and 4000 characters' });
+    }
+
+    await sendCustomPackageEmail(pkg, subject, message);
+
+    res.json({ success: true, message: `Email sent successfully to ${pkg.receiverEmail}` });
+  } catch (error) {
+    console.error('Custom email error:', error);
+    res.status(500).json({ success: false, message: 'Failed to send custom email' });
+  }
+};
 
 exports.resendEmail = async (req, res) => {
   try {
@@ -482,7 +654,7 @@ exports.resendEmail = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Failed to resend email. Check SendGrid configuration.'
+      message: 'Failed to resend email. Check SMTP configuration.'
     });
   }
 };

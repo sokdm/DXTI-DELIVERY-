@@ -10,6 +10,8 @@ const {
   getReceipt,
   downloadReceiptPDF,
   updateLocation,
+  updatePackage,
+  sendCustomEmail,
   resendEmail,
 } = require('../controllers/packageController');
 const { auth } = require('../middleware/auth');
@@ -23,6 +25,8 @@ router.get('/:id/receipt', auth, getReceipt);
 router.get('/:id/receipt/pdf', auth, downloadReceiptPDF);
 router.patch('/:id/status', auth, updateStatus);
 router.patch('/:id/location', auth, updateLocation);
+router.patch('/:id', auth, upload.single('packageImage'), handleUploadError, updatePackage);
+router.post('/:id/send-email', auth, sendCustomEmail);
 router.post('/:id/resend-email', auth, resendEmail);
 router.delete('/:id', auth, deletePackage);
 

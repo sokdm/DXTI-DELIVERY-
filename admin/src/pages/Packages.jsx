@@ -12,7 +12,11 @@ import {
   Printer,
   Download,
   MapPin,
-  Navigation
+  Navigation,
+  Edit3,
+  Mail,
+  Send,
+  Loader2
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -37,9 +41,15 @@ const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [stopReason, setStopReason] = useState('');
   const [locationForm, setLocationForm] = useState({ lat: '', lng: '', locationName: '' });
+  const [editForm, setEditForm] = useState({});
+  const [editImage, setEditImage] = useState(null);
+  const [emailForm, setEmailForm] = useState({ subject: '', message: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchPackages();
@@ -159,6 +169,112 @@ const Packages = () => {
       locationName: pkg.currentLocation?.locationName || '',
     });
     setShowLocationModal(true);
+  };
+
+  const openEditModal = (pkg) => {
+    setSelectedPackage(pkg);
+    setEditForm({
+      trackingCode: pkg.trackingCode || '',
+      packageName: pkg.packageName || '',
+      packageDescription: pkg.packageDescription || '',
+      packageWeight: pkg.packageWeight || '',
+      deliveryPrice: pkg.deliveryPrice || '',
+      senderName: pkg.senderName || '',
+      senderPhone: pkg.senderPhone || '',
+      senderEmail: pkg.senderEmail || '',
+      senderAddress: pkg.senderAddress || '',
+      senderCity: pkg.senderCity || '',
+      senderCountry: pkg.senderCountry || '',
+      receiverName: pkg.receiverName || '',
+      receiverPhone: pkg.receiverPhone || '',
+      receiverEmail: pkg.receiverEmail || '',
+      receiverAddress: pkg.receiverAddress || '',
+      receiverCity: pkg.receiverCity || '',
+      receiverCountry: pkg.receiverCountry || '',
+      receiverGender: pkg.receiverGender || 'other',
+      status: pkg.status || 'pending',
+      stopReason: pkg.stopReason || '',
+      currentLat: pkg.currentLocation?.lat || '',
+      currentLng: pkg.currentLocation?.lng || '',
+      currentLocationName: pkg.currentLocation?.locationName || '',
+      destinationLat: pkg.destinationLocation?.lat || '',
+      destinationLng: pkg.destinationLocation?.lng || '',
+      destinationLocationName: pkg.destinationLocation?.locationName || '',
+    });
+    setEditImage(null);
+    setShowEditModal(true);
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePackageUpdate = async () => {
+    try {
+      setSubmitting(true);
+      const data = new FormData();
+      const simpleFields = [
+        'trackingCode', 'packageName', 'packageDescription', 'packageWeight', 'deliveryPrice',
+        'senderName', 'senderPhone', 'senderEmail', 'senderAddress', 'senderCity', 'senderCountry',
+        'receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity',
+        'receiverCountry', 'receiverGender', 'status', 'stopReason',
+      ];
+      simpleFields.forEach((field) => data.append(field, editForm[field] ?? ''));
+      data.append('currentLocation', JSON.stringify({
+        lat: editForm.currentLat,
+        lng: editForm.currentLng,
+        locationName: editForm.currentLocationName,
+      }));
+      data.append('destinationLocation', JSON.stringify({
+        lat: editForm.destinationLat,
+        lng: editForm.destinationLng,
+        locationName: editForm.destinationLocationName,
+      }));
+      if (editImage) data.append('packageImage', editImage);
+
+      await axios.patch(`${API_URL}/packages/${selectedPackage._id}`, data, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('dxt_admin_token')}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      toast.success('Package updated');
+      setShowEditModal(false);
+      setSelectedPackage(null);
+      fetchPackages();
+    } catch (error) {
+      console.error('Package update error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update package');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openEmailModal = (pkg) => {
+    setSelectedPackage(pkg);
+    setEmailForm({
+      subject: `Update for shipment ${pkg.trackingCode}`,
+      message: '',
+    });
+    setShowEmailModal(true);
+  };
+
+  const handleSendCustomEmail = async () => {
+    try {
+      setSubmitting(true);
+      const response = await axios.post(`${API_URL}/packages/${selectedPackage._id}/send-email`, emailForm, {
+        headers: getAuthHeaders(),
+      });
+      toast.success(response.data.message || 'Email sent');
+      setShowEmailModal(false);
+      setSelectedPackage(null);
+      setEmailForm({ subject: '', message: '' });
+    } catch (error) {
+      console.error('Send email error:', error);
+      toast.error(error.response?.data?.message || 'Failed to send email');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filteredPackages = packages.filter(pkg =>
@@ -336,6 +452,20 @@ const Packages = () => {
                           title="Edit Location"
                         >
                           <Navigation className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => openEditModal(pkg)}
+                          className="p-2 text-slate-400 hover:text-admin-primary transition-colors"
+                          title="Edit Package"
+                        >
+                          <Edit3 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => openEmailModal(pkg)}
+                          className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                          title="Send Email"
+                        >
+                          <Mail className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(pkg._id)}
@@ -523,6 +653,161 @@ const Packages = () => {
                     className="flex-1 admin-btn disabled:opacity-50"
                   >
                     Update Location
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showEditModal && selectedPackage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-admin-primary" />
+                  Edit Package
+                </h3>
+                <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  ['trackingCode', 'Tracking Code'],
+                  ['packageName', 'Package Name'],
+                  ['packageWeight', 'Weight (kg)', 'number'],
+                  ['deliveryPrice', 'Delivery Price', 'number'],
+                  ['senderName', 'Sender Name'],
+                  ['senderPhone', 'Sender Phone'],
+                  ['senderEmail', 'Sender Email', 'email'],
+                  ['senderAddress', 'Sender Address'],
+                  ['senderCity', 'Sender City'],
+                  ['senderCountry', 'Sender Country'],
+                  ['receiverName', 'Receiver Name'],
+                  ['receiverPhone', 'Receiver Phone'],
+                  ['receiverEmail', 'Receiver Email', 'email'],
+                  ['receiverAddress', 'Receiver Address'],
+                  ['receiverCity', 'Receiver City'],
+                  ['receiverCountry', 'Receiver Country'],
+                  ['currentLat', 'Current Lat', 'number'],
+                  ['currentLng', 'Current Lng', 'number'],
+                  ['currentLocationName', 'Current Location'],
+                  ['destinationLat', 'Destination Lat', 'number'],
+                  ['destinationLng', 'Destination Lng', 'number'],
+                  ['destinationLocationName', 'Destination Location'],
+                ].map(([field, label, type = 'text']) => (
+                  <div key={field} className={field.includes('Address') || field.includes('Location') ? 'md:col-span-2' : ''}>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{label}</label>
+                    <input
+                      type={type}
+                      step={type === 'number' ? 'any' : undefined}
+                      value={editForm[field] ?? ''}
+                      onChange={(e) => handleEditChange(field, e.target.value)}
+                      className="admin-input"
+                    />
+                  </div>
+                ))}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Receiver Gender</label>
+                  <select value={editForm.receiverGender || 'other'} onChange={(e) => handleEditChange('receiverGender', e.target.value)} className="admin-input">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Status</label>
+                  <select value={editForm.status || 'pending'} onChange={(e) => handleEditChange('status', e.target.value)} className="admin-input">
+                    <option value="pending">Pending</option>
+                    <option value="in_transit">In Transit</option>
+                    <option value="arrived">Arrived</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="stopped">Stopped</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Replace Image</label>
+                  <input type="file" accept="image/*" onChange={(e) => setEditImage(e.target.files?.[0] || null)} className="admin-input" />
+                </div>
+                <div className="md:col-span-3">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Description</label>
+                  <textarea value={editForm.packageDescription || ''} onChange={(e) => handleEditChange('packageDescription', e.target.value)} className="admin-input" rows="3" />
+                </div>
+                {editForm.status === 'stopped' && (
+                  <div className="md:col-span-3">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Stop Reason</label>
+                    <textarea value={editForm.stopReason || ''} onChange={(e) => handleEditChange('stopReason', e.target.value)} className="admin-input" rows="2" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-end mt-6">
+                <button onClick={() => setShowEditModal(false)} className="admin-btn-secondary">Cancel</button>
+                <button onClick={handlePackageUpdate} disabled={submitting} className="admin-btn inline-flex items-center justify-center gap-2 disabled:opacity-50">
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showEmailModal && selectedPackage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-xl w-full"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-blue-500" />
+                  Send Email
+                </h3>
+                <button onClick={() => setShowEmailModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Recipient</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">{selectedPackage.receiverEmail}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subject</label>
+                  <input value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })} className="admin-input" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Message</label>
+                  <textarea value={emailForm.message} onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })} className="admin-input" rows="6" placeholder="Write the customer-facing message..." />
+                </div>
+                <div className="flex gap-3 justify-end pt-2">
+                  <button onClick={() => setShowEmailModal(false)} className="admin-btn-secondary">Cancel</button>
+                  <button onClick={handleSendCustomEmail} disabled={submitting || !emailForm.subject || !emailForm.message} className="admin-btn inline-flex items-center gap-2 disabled:opacity-50">
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Send Email
                   </button>
                 </div>
               </div>
