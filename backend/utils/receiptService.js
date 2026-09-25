@@ -11,9 +11,9 @@ const escapeHtml = (value = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const money = (value) => {
+const money = (value, symbol = '$', code = 'USD') => {
   const amount = typeof value === 'number' ? value : parseFloat(value) || 0;
-  return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${code}`;
 };
 
 const dateTime = (value) => {
@@ -51,6 +51,7 @@ const generateReceiptHTML = (pkg) => {
   const pieces = Math.max(1, Math.ceil(Number(weight || 1) / 10));
   const currentLocation = pkg.currentLocation?.locationName || 'N/A';
   const destination = pkg.destinationLocation?.locationName || `${pkg.receiverCity || ''}, ${pkg.receiverCountry || ''}`.trim();
+  const totalAmount = money(pkg.deliveryPrice, pkg.deliveryCurrencySymbol || '$', pkg.deliveryCurrency || 'USD');
 
   return `<!doctype html>
 <html lang="en">
@@ -155,7 +156,7 @@ const generateReceiptHTML = (pkg) => {
         <div class="metric"><span>Weight</span><strong>${escapeHtml(weight)} kg</strong></div>
         <div class="metric"><span>Pieces</span><strong>${pieces}</strong></div>
         <div class="metric"><span>Status</span><strong>${escapeHtml(statusLabel(pkg.status))}</strong></div>
-        <div class="metric"><span>Amount</span><strong>${escapeHtml(money(pkg.deliveryPrice))}</strong></div>
+        <div class="metric"><span>Amount</span><strong>${escapeHtml(totalAmount)}</strong></div>
       </div>
 
       <h2 class="section-title">Shipment Details</h2>
@@ -166,13 +167,14 @@ const generateReceiptHTML = (pkg) => {
         ${row('Destination', destination)}
         ${row('Created Date', dateTime(pkg.createdAt))}
         ${row('Last Updated', dateTime(pkg.updatedAt))}
+        ${row('Currency', `${pkg.deliveryCurrencyCountry || 'United States'} (${pkg.deliveryCurrencySymbol || '$'} ${pkg.deliveryCurrency || 'USD'})`)}
         ${row('Receipt Generated', dateTime(new Date()))}
       </table>
 
       <div class="amount">
         <div>
           <span>Total shipping amount</span>
-          <strong>${escapeHtml(money(pkg.deliveryPrice))}</strong>
+          <strong>${escapeHtml(totalAmount)}</strong>
         </div>
         <div style="font-size:13px;line-height:1.6;color:#fee2e2;">
           Payment may be required before dispatch or release. Keep this receipt for customer records.
@@ -223,6 +225,7 @@ const generateReceiptPDF = (pkg) => new Promise((resolve, reject) => {
   const pieces = Math.max(1, Math.ceil(Number(weight || 1) / 10));
   const currentLocation = pkg.currentLocation?.locationName || 'N/A';
   const destination = pkg.destinationLocation?.locationName || `${pkg.receiverCity || ''}, ${pkg.receiverCountry || ''}`.trim();
+  const totalAmount = money(pkg.deliveryPrice, pkg.deliveryCurrencySymbol || '$', pkg.deliveryCurrency || 'USD');
 
   doc.rect(0, 0, 595, 8).fill('#D40511');
   doc.rect(190, 0, 215, 8).fill('#FFCC00');
@@ -260,6 +263,7 @@ const generateReceiptPDF = (pkg) => new Promise((resolve, reject) => {
     ['Status', statusLabel(pkg.status)],
     ['Current Location', currentLocation],
     ['Destination', destination],
+    ['Currency', `${pkg.deliveryCurrencyCountry || 'United States'} (${pkg.deliveryCurrencySymbol || '$'} ${pkg.deliveryCurrency || 'USD'})`],
     ['Last Updated', dateTime(pkg.updatedAt)],
   ];
   let y = 430;
@@ -272,7 +276,7 @@ const generateReceiptPDF = (pkg) => new Promise((resolve, reject) => {
 
   doc.rect(42, 650, 512, 64).fill('#D40511');
   doc.fillColor('#fecaca').fontSize(9).font('Helvetica-Bold').text('TOTAL SHIPPING AMOUNT', 62, 666, { characterSpacing: 1.5 });
-  doc.fillColor('#FFCC00').fontSize(25).font('Helvetica-Bold').text(money(pkg.deliveryPrice), 62, 680);
+  doc.fillColor('#FFCC00').fontSize(25).font('Helvetica-Bold').text(totalAmount, 62, 680);
   doc.fillColor('#fee2e2').fontSize(9).font('Helvetica').text('Payment may be required before dispatch or release.', 326, 672, { width: 200 });
 
   doc.rect(42, 730, 512, 34).stroke('#9ca3af');

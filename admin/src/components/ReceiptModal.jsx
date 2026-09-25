@@ -10,7 +10,12 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
 
   const handlePrint = () => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    window.open(`${API_URL}/packages/${packageData._id}/receipt`, '_blank', 'width=900,height=1000');
+    const token = localStorage.getItem('dxt_admin_token');
+    if (!token) {
+      toast.error('Session expired. Please log in again.');
+      return;
+    }
+    window.open(`${API_URL}/packages/${packageData._id}/receipt?token=${encodeURIComponent(token)}`, '_blank', 'width=900,height=1000');
   };
 
   const handleDownloadPDF = async () => {
@@ -65,6 +70,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
     delivered: 'bg-green-100 text-green-800 border-green-300',
     stopped: 'bg-red-100 text-red-800 border-red-300',
   };
+  const money = `${packageData.deliveryCurrencySymbol || '$'}${Number(packageData.deliveryPrice || 0).toFixed(2)} ${packageData.deliveryCurrency || 'USD'}`;
 
   return (
     <AnimatePresence>
@@ -163,7 +169,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
                   </div>
                   <div className="bg-slate-50 rounded-md p-2">
                     <p className="text-[9px] text-slate-400 uppercase font-semibold">Price</p>
-                    <p className="text-sm font-bold text-[#D40511]">${packageData.deliveryPrice?.toFixed(2)}</p>
+                    <p className="text-sm font-bold text-[#D40511]">{money}</p>
                   </div>
                 </div>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">{packageData.packageDescription}</p>
@@ -176,7 +182,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
                     <p className="text-[10px] text-[#B8860B] uppercase tracking-widest font-black">Shipping Amount</p>
                     <p className="text-[10px] text-[#B8860B]/70 mt-0.5">Pay before delivery</p>
                   </div>
-                  <p className="text-2xl font-black text-[#D40511]">${packageData.deliveryPrice?.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-[#D40511]">{money}</p>
                 </div>
                 <div className="mt-2 pt-2 border-t border-[#FFCC00]/30 flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-[#B8860B]" />

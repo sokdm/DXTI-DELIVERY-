@@ -30,6 +30,28 @@ const formatDate = (date) => {
   });
 };
 
+const formatCurrency = (pkg) => {
+  const amount = typeof pkg.deliveryPrice === 'number' ? pkg.deliveryPrice : parseFloat(pkg.deliveryPrice) || 0;
+  return `${pkg.deliveryCurrencySymbol || '$'}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${pkg.deliveryCurrency || 'USD'}`;
+};
+
+const getGreeting = (gender, name) => {
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const title = gender === 'female' ? 'Ms.' : gender === 'male' ? 'Mr.' : '';
+  return `${timeGreeting}${title ? ', ' + title : ''} ${name || 'customer'}`.trim();
+};
+
+const getServiceType = (pkg) => {
+  const price = typeof pkg.deliveryPrice === 'number' ? pkg.deliveryPrice : parseFloat(pkg.deliveryPrice) || 0;
+  if (price >= 200) return 'DHL Express Worldwide';
+  if (price >= 100) return 'DHL Express 12:00';
+  if (price >= 50) return 'DHL Express 10:30';
+  return 'DHL Express 9:00';
+};
+
+const getPieces = (pkg) => Math.max(1, Math.ceil(Number(pkg.packageWeight || 1) / 10));
+
 const statusLabels = {
   pending: 'Package created',
   received: 'Package received',
@@ -77,6 +99,26 @@ const detailRow = (label, value) => `
     <td style="padding:10px 0;color:#111827;font-size:14px;font-weight:700;text-align:right;">${escapeHtml(value || 'N/A')}</td>
   </tr>`;
 
+const panel = (label, value, sub = '') => `
+  <td valign="top" width="50%" style="padding:8px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-left:4px solid #D40511;border-radius:4px;">
+      <tr><td style="padding:16px;">
+        <div style="font-size:10px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.14em;">${escapeHtml(label)}</div>
+        <div style="font-size:15px;font-weight:800;color:#111827;line-height:1.45;margin-top:8px;">${escapeHtml(value || 'N/A')}</div>
+        ${sub ? `<div style="font-size:12px;color:#6b7280;line-height:1.5;margin-top:5px;">${escapeHtml(sub)}</div>` : ''}
+      </td></tr>
+    </table>
+  </td>`;
+
+const barcodeSection = (pkg) => `
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f9fafb;border:1px dashed #9ca3af;margin-top:8px;">
+    <tr><td style="padding:18px;text-align:center;">
+      <div style="font-family:'Courier New',monospace;font-size:26px;letter-spacing:4px;color:#111827;">|| | ||| || |||| | ||| || |</div>
+      <div style="font-family:'Courier New',monospace;font-size:12px;font-weight:800;color:#111827;letter-spacing:.12em;margin-top:8px;">${escapeHtml(pkg.trackingCode)}</div>
+      <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.14em;margin-top:8px;font-weight:800;">Routing and tracking reference</div>
+    </td></tr>
+  </table>`;
+
 const timelineHtml = (pkg) => {
   const items = Array.isArray(pkg.statusHistory) && pkg.statusHistory.length
     ? pkg.statusHistory
@@ -103,6 +145,10 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
   const status = getStatusLabel(pkg.status);
   const currentLocation = pkg.currentLocation?.locationName || `${pkg.senderCity || ''}, ${pkg.senderCountry || ''}`.trim();
   const destination = pkg.destinationLocation?.locationName || `${pkg.receiverCity || ''}, ${pkg.receiverCountry || ''}`.trim();
+  const amount = formatCurrency(pkg);
+  const greeting = getGreeting(pkg.receiverGender, pkg.receiverName);
+  const serviceType = getServiceType(pkg);
+  const pieces = getPieces(pkg);
 
   return `<!doctype html>
 <html lang="en">
@@ -121,7 +167,7 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
           <td style="padding:34px 28px 22px;">
             <div style="font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:#D40511;font-weight:800;">Shipment notification</div>
             <h1 style="margin:10px 0 8px;font-size:28px;line-height:1.2;color:#111827;">${escapeHtml(title)}</h1>
-            <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.7;">${escapeHtml(intro)}</p>
+            <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.7;"><strong>${escapeHtml(greeting)},</strong><br>${escapeHtml(intro)}</p>
           </td>
         </tr>
         <tr>
@@ -137,21 +183,47 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
         </tr>
         ${customMessage ? `<tr><td style="padding:0 28px 26px;"><div style="padding:18px 20px;background:#fff7ed;border-left:4px solid #FFCC00;border-radius:4px;color:#374151;font-size:15px;line-height:1.7;white-space:pre-line;">${escapeHtml(customMessage)}</div></td></tr>` : ''}
         <tr>
+          <td style="padding:0 20px 20px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+              <tr>
+                ${panel('Service', serviceType, `${pieces} piece${pieces > 1 ? 's' : ''} • ${pkg.packageWeight || 0} kg`)}
+                ${panel('Shipping amount', amount, `${pkg.deliveryCurrencyCountry || 'United States'} billing currency`)}
+              </tr>
+              <tr>
+                ${panel('Shipper', pkg.senderName, [pkg.senderAddress, pkg.senderCity, pkg.senderCountry].filter(Boolean).join(', '))}
+                ${panel('Receiver', pkg.receiverName, [pkg.receiverAddress, pkg.receiverCity, pkg.receiverCountry].filter(Boolean).join(', '))}
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
           <td style="padding:0 28px 28px;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
               ${detailRow('Package', pkg.packageName)}
+              ${detailRow('Description', pkg.packageDescription)}
               ${detailRow('Sender', pkg.senderName)}
               ${detailRow('Receiver', pkg.receiverName)}
               ${detailRow('Origin', `${pkg.senderCity || ''}${pkg.senderCountry ? ', ' + pkg.senderCountry : ''}`)}
               ${detailRow('Destination', `${pkg.receiverCity || ''}${pkg.receiverCountry ? ', ' + pkg.receiverCountry : ''}`)}
               ${detailRow('Current location', currentLocation)}
+              ${detailRow('Destination facility', destination)}
               ${detailRow('Expected delivery', formatDate(pkg.estimatedDelivery || pkg.estimatedDeliveryDate))}
               ${detailRow('Weight', pkg.packageWeight ? `${pkg.packageWeight} kg` : '')}
+              ${detailRow('Pieces', `${pieces}`)}
+              ${detailRow('Shipping amount', amount)}
               ${detailRow('Latest update', formatDate(pkg.updatedAt || new Date()))}
             </table>
           </td>
         </tr>
+        <tr><td style="padding:0 28px 28px;">${barcodeSection(pkg)}</td></tr>
         <tr><td style="padding:0 28px 28px;"><table role="presentation" cellspacing="0" cellpadding="0" width="100%">${timelineHtml(pkg)}</table></td></tr>
+        <tr>
+          <td style="padding:0 28px 28px;">
+            <div style="background:#fff7ed;border-left:4px solid #FFCC00;border-radius:4px;padding:16px 18px;color:#92400e;font-size:13px;line-height:1.7;">
+              Keep this email for your shipment records. Payment, customs, or identity checks may be required before release depending on the destination country.
+            </div>
+          </td>
+        </tr>
         <tr>
           <td align="center" style="padding:0 28px 34px;">
             <a href="${trackingUrl}" style="display:inline-block;background:#D40511;color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:4px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;">Track package</a>

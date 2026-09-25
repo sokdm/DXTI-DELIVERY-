@@ -40,6 +40,9 @@ const packageSchema = new mongoose.Schema({
   receiverCity: { type: String, required: true },
   receiverGender: { type: String, enum: ['male', 'female', 'other'], required: true },
   deliveryPrice: { type: Number, required: true },
+  deliveryCurrency: { type: String, default: 'USD' },
+  deliveryCurrencySymbol: { type: String, default: '$' },
+  deliveryCurrencyCountry: { type: String, default: 'United States' },
   currentLocation: {
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },

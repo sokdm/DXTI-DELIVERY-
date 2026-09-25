@@ -86,6 +86,9 @@ exports.createPackage = async (req, res) => {
       receiverCity: data.receiverCity,
       receiverGender: data.receiverGender,
       deliveryPrice: deliveryPrice,
+      deliveryCurrency: data.deliveryCurrency || 'USD',
+      deliveryCurrencySymbol: data.deliveryCurrencySymbol || '$',
+      deliveryCurrencyCountry: data.deliveryCurrencyCountry || 'United States',
       currentLocation: currentLocation,
       destinationLocation: destinationLocation,
       status: 'pending',
@@ -548,6 +551,9 @@ exports.updatePackage = async (req, res) => {
       'receiverCountry',
       'receiverCity',
       'receiverGender',
+      'deliveryCurrency',
+      'deliveryCurrencySymbol',
+      'deliveryCurrencyCountry',
       'stopReason',
     ];
 

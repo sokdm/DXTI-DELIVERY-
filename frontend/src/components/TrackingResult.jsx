@@ -87,6 +87,9 @@ const TrackingResult = ({ packageData }) => {
 
   const weight = packageData.packageWeight;
   const price = packageData.deliveryPrice;
+  const priceText = price !== undefined
+    ? `${packageData.deliveryCurrencySymbol || '$'}${parseFloat(price || 0).toFixed(2)} ${packageData.deliveryCurrency || 'USD'}`
+    : 'N/A';
   const description = packageData.packageDescription;
   const packageName = packageData.packageName;
   const packageImage = packageData.packageImage;
@@ -394,7 +397,7 @@ const TrackingResult = ({ packageData }) => {
                       </div>
                       <div>
                         <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Delivery Price</div>
-                        <div className="font-black text-dhl-black dark:text-white text-xl tracking-tight">{price !== undefined ? '$' + parseFloat(price).toFixed(2) : 'N/A'}</div>
+                        <div className="font-black text-dhl-black dark:text-white text-xl tracking-tight">{priceText}</div>
                       </div>
                     </div>
                   </div>

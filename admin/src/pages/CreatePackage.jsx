@@ -5,7 +5,6 @@ import {
   Package,
   User,
   MapPin,
-  DollarSign,
   Upload,
   Loader2,
   CheckCircle,
@@ -15,6 +14,7 @@ import {
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ReceiptModal from '../components/ReceiptModal';
+import { currencyOptions, defaultCurrency } from '../utils/currencies';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -67,6 +67,9 @@ const CreatePackage = () => {
     receiverCity: '',
     receiverGender: 'male',
     deliveryPrice: '',
+    deliveryCurrencyCountry: defaultCurrency.country,
+    deliveryCurrency: defaultCurrency.code,
+    deliveryCurrencySymbol: defaultCurrency.symbol,
     currentLocation: { city: '', country: '' },
     destinationLocation: { city: '', country: '' },
   });
@@ -83,6 +86,16 @@ const CreatePackage = () => {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleCurrencyChange = (e) => {
+    const selected = currencyOptions.find((option) => option.country === e.target.value) || defaultCurrency;
+    setFormData(prev => ({
+      ...prev,
+      deliveryCurrencyCountry: selected.country,
+      deliveryCurrency: selected.code,
+      deliveryCurrencySymbol: selected.symbol,
+    }));
   };
 
   const handleImageChange = (e) => {
@@ -192,6 +205,9 @@ const CreatePackage = () => {
         receiverCity: '',
         receiverGender: 'male',
         deliveryPrice: '',
+        deliveryCurrencyCountry: defaultCurrency.country,
+        deliveryCurrency: defaultCurrency.code,
+        deliveryCurrencySymbol: defaultCurrency.symbol,
         currentLocation: { city: '', country: '' },
         destinationLocation: { city: '', country: '' },
       });
@@ -381,10 +397,30 @@ case 4:
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Delivery Price ($) *
+                Billing Country / Currency *
+              </label>
+              <select
+                value={formData.deliveryCurrencyCountry}
+                onChange={handleCurrencyChange}
+                className="admin-input"
+                required
+              >
+                {currencyOptions.map((option) => (
+                  <option key={`${option.country}-${option.code}`} value={option.country}>
+                    {option.country} - {option.symbol} {option.code}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Delivery Price ({formData.deliveryCurrencySymbol} {formData.deliveryCurrency}) *
               </label>
               <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-sm font-black text-slate-500">
+                  {formData.deliveryCurrencySymbol}
+                </span>
                 <input type="number" step="0.01" name="deliveryPrice" value={formData.deliveryPrice} onChange={handleChange} className="admin-input pl-12" placeholder="0.00" required />
               </div>
             </div>

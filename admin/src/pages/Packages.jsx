@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { currencyOptions, defaultCurrency, findCurrencyByCountry, formatMoney } from '../utils/currencies';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173';
@@ -33,6 +34,9 @@ const getAuthHeaders = () => {
     'Content-Type': 'application/json'
   };
 };
+
+const packageMoney = (pkg) =>
+  formatMoney(pkg.deliveryPrice, pkg.deliveryCurrencySymbol || '$', pkg.deliveryCurrency || 'USD');
 
 const Packages = () => {
   const [packages, setPackages] = useState([]);
@@ -206,6 +210,9 @@ const Packages = () => {
       packageDescription: pkg.packageDescription || '',
       packageWeight: pkg.packageWeight || '',
       deliveryPrice: pkg.deliveryPrice || '',
+      deliveryCurrencyCountry: pkg.deliveryCurrencyCountry || defaultCurrency.country,
+      deliveryCurrency: pkg.deliveryCurrency || defaultCurrency.code,
+      deliveryCurrencySymbol: pkg.deliveryCurrencySymbol || defaultCurrency.symbol,
       senderName: pkg.senderName || '',
       senderPhone: pkg.senderPhone || '',
       senderEmail: pkg.senderEmail || '',
@@ -237,12 +244,23 @@ const Packages = () => {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleEditCurrencyChange = (country) => {
+    const selected = findCurrencyByCountry(country);
+    setEditForm((prev) => ({
+      ...prev,
+      deliveryCurrencyCountry: selected.country,
+      deliveryCurrency: selected.code,
+      deliveryCurrencySymbol: selected.symbol,
+    }));
+  };
+
   const handlePackageUpdate = async () => {
     try {
       setSubmitting(true);
       const data = new FormData();
       const simpleFields = [
         'trackingCode', 'packageName', 'packageDescription', 'packageWeight', 'deliveryPrice',
+        'deliveryCurrencyCountry', 'deliveryCurrency', 'deliveryCurrencySymbol',
         'senderName', 'senderPhone', 'senderEmail', 'senderAddress', 'senderCity', 'senderCountry',
         'receiverName', 'receiverPhone', 'receiverEmail', 'receiverAddress', 'receiverCity',
         'receiverCountry', 'receiverGender', 'status', 'stopReason',
@@ -450,7 +468,7 @@ const Packages = () => {
                       )}
                     </td>
                     <td className="py-4 px-4">
-                      <span className="font-semibold text-slate-900 dark:text-white">${pkg.deliveryPrice.toFixed(2)}</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{packageMoney(pkg)}</span>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-1">
@@ -742,7 +760,7 @@ const Packages = () => {
                   ['trackingCode', 'Tracking Code'],
                   ['packageName', 'Package Name'],
                   ['packageWeight', 'Weight (kg)', 'number'],
-                  ['deliveryPrice', 'Delivery Price', 'number'],
+                  ['deliveryPrice', `Delivery Price (${editForm.deliveryCurrencySymbol || '$'} ${editForm.deliveryCurrency || 'USD'})`, 'number'],
                   ['senderName', 'Sender Name'],
                   ['senderPhone', 'Sender Phone'],
                   ['senderEmail', 'Sender Email', 'email'],
@@ -773,6 +791,21 @@ const Packages = () => {
                     />
                   </div>
                 ))}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Billing Country / Currency</label>
+                  <select
+                    value={editForm.deliveryCurrencyCountry || defaultCurrency.country}
+                    onChange={(e) => handleEditCurrencyChange(e.target.value)}
+                    className="admin-input"
+                  >
+                    {currencyOptions.map((option) => (
+                      <option key={`${option.country}-${option.code}`} value={option.country}>
+                        {option.country} - {option.symbol} {option.code}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Receiver Gender</label>
