@@ -1,13 +1,19 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Package, Clock, Globe, Shield, MapPin, Radio, Plane, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Package, Clock, Globe, Shield, MapPin, Radio, Plane, CheckCircle2, Route, Camera, FileCheck2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const stats = [
-  { icon: Package, value: '50K+', label: 'Handled' },
-  { icon: Globe, value: '120+', label: 'Routes' },
+  { icon: Package, value: '50K+', label: 'Shipments' },
+  { icon: Globe, value: '120+', label: 'Countries' },
   { icon: Clock, value: '24/7', label: 'Monitoring' },
-  { icon: Shield, value: '100%', label: 'Protected' },
+  { icon: Shield, value: 'Secure', label: 'Records' },
+];
+
+const liveCards = [
+  { icon: Route, label: 'Route quality', value: 'Priority lane' },
+  { icon: Camera, label: 'Location proof', value: 'Photo check' },
+  { icon: FileCheck2, label: 'Docs', value: 'Receipt ready' },
 ];
 
 const checkpoints = [
@@ -40,7 +46,7 @@ const Hero = () => {
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-dhl-yellow/20 border-l-4 border-dhl-yellow mb-6">
                 <span className="text-dhl-yellow font-bold uppercase tracking-wider text-sm">
-                  DHL-styled express logistics
+                  Premium express logistics
                 </span>
               </div>
 
@@ -50,8 +56,8 @@ const Hero = () => {
               </h1>
 
               <p className="text-lg md:text-xl text-dhl-gray-200 mb-8 max-w-2xl leading-relaxed">
-                Shipments are organized through a professional operations dashboard, live map tracking,
-                branded receipts, status notifications, and customer-ready delivery updates from pickup to final mile.
+                A refined delivery experience for high-value shipments, with live map tracking,
+                verified package records, branded customer updates, and clear progress from pickup to final mile.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
@@ -101,11 +107,32 @@ const Hero = () => {
             className="relative"
           >
             <div className="relative bg-white/10 backdrop-blur-md border border-white/15 p-3 shadow-2xl">
-              <img
-                src="/dhl-warehouse.jpg"
-                alt="DHL warehouse package processing"
-                className="h-[360px] md:h-[460px] w-full object-cover"
-              />
+              <div className="grid grid-cols-[1.15fr_.85fr] gap-3">
+                <img
+                  src="/dhl-warehouse.jpg"
+                  alt="Express warehouse package processing"
+                  className="h-[420px] md:h-[520px] w-full object-cover"
+                />
+                <div className="grid gap-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=700&q=80"
+                    alt="Premium delivery fleet"
+                    className="h-full min-h-[180px] object-cover"
+                  />
+                  <div className="bg-dhl-yellow text-dhl-black p-5 flex flex-col justify-between">
+                    <div className="text-xs font-black uppercase tracking-widest text-dhl-red">Control layer</div>
+                    <div>
+                      <div className="text-4xl font-black">Live</div>
+                      <div className="font-black uppercase leading-tight">route intelligence</div>
+                    </div>
+                  </div>
+                  <img
+                    src="https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=700&q=80"
+                    alt="Courier loading packages"
+                    className="h-full min-h-[180px] object-cover"
+                  />
+                </div>
+              </div>
               <div className="absolute left-6 right-6 bottom-6 bg-dhl-gray-950/90 border-l-4 border-dhl-yellow p-5">
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
@@ -113,6 +140,15 @@ const Hero = () => {
                     <div className="text-white text-2xl font-black uppercase">Shipment in control</div>
                   </div>
                   <div className="h-3 w-3 bg-green-400 rounded-full animate-pulse"></div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {liveCards.map((item) => (
+                    <div key={item.label} className="bg-white/10 p-3">
+                      <item.icon className="w-4 h-4 text-dhl-yellow mb-2" />
+                      <div className="text-[10px] text-dhl-gray-400 font-bold uppercase">{item.label}</div>
+                      <div className="text-xs text-white font-black">{item.value}</div>
+                    </div>
+                  ))}
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {checkpoints.map((item) => (
