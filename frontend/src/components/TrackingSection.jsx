@@ -19,7 +19,7 @@ const TrackingSection = () => {
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
-          backgroundImage: 'repeating-linear-gradient(45deg, #FFCC00 0, #FFCC00 2px, transparent 2px, transparent 20px, #D40511 20px, #D40511 22px, transparent 22px, transparent 40px)'
+          backgroundImage: 'repeating-linear-gradient(45deg, #35E0A1 0, #35E0A1 2px, transparent 2px, transparent 20px, #00A6A6 20px, #00A6A6 22px, transparent 22px, transparent 40px)'
         }}></div>
       </div>
 
@@ -54,7 +54,7 @@ const TrackingSection = () => {
                   type="text"
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
-                  placeholder="Enter tracking code (e.g., DXT-8F3K9L2)"
+                  placeholder="Enter tracking code (e.g., TRX-8F3K9L2)"
                   className="input-dhl pl-12 text-lg uppercase font-bold"
                 />
               </div>
@@ -71,7 +71,7 @@ const TrackingSection = () => {
             </form>
 
             <p className="mt-4 text-sm text-dhl-gray-500 dark:text-dhl-gray-400">
-              Need help? Contact us at <a href="mailto:dhld5736@gmail.com" className="text-dhl-red font-bold hover:underline">dhld5736@gmail.com</a> or <a href="https://t.me/Dhl5788" target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold hover:underline">Telegram @Dhl5788</a>
+              Need help? Contact us at <a href="mailto:support@trxlogistics.com" className="text-dhl-red font-bold hover:underline">support@trxlogistics.com</a> or <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold hover:underline">Telegram @TRXLogistics</a>
             </p>
           </motion.div>
 

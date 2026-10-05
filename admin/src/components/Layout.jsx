@@ -49,7 +49,7 @@ const Layout = () => {
                 exit={{ opacity: 0 }}
                 className="text-xl font-bold whitespace-nowrap"
               >
-                DXTI Admin
+                TRX Admin
               </motion.span>
             )}
           </AnimatePresence>
@@ -116,7 +116,7 @@ const Layout = () => {
             <div className="p-2 bg-gradient-to-br from-admin-primary to-admin-secondary rounded-xl">
               <Truck className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold">DXTI Admin</span>
+            <span className="font-bold">TRX Admin</span>
           </div>
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -165,7 +165,7 @@ const Layout = () => {
                 Welcome back, {admin?.name}
               </h1>
               <p className="text-slate-500 dark:text-slate-400">
-                Manage your deliveries and track packages
+                Manage TRX shipments, receipts, stamps, and customer updates
               </p>
             </div>
             <div className="flex items-center gap-4">

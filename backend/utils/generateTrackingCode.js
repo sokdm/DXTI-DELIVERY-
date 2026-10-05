@@ -1,5 +1,5 @@
 const generateTrackingCode = () => {
-  const prefix = 'DXT';
+  const prefix = 'TRX';
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
   

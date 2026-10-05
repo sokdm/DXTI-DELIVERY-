@@ -9,14 +9,14 @@ export default {
     extend: {
       colors: {
         dhl: {
-          yellow: '#FFCC00',
-          'yellow-light': '#FFE033',
-          'yellow-dark': '#E6B800',
-          red: '#D40511',
-          'red-dark': '#B0040E',
-          black: '#1A1A1A',
-          'gray-900': '#0F172A',
-          'gray-800': '#1E293B',
+          yellow: '#35E0A1',
+          'yellow-light': '#6EE7B7',
+          'yellow-dark': '#10B981',
+          red: '#00A6A6',
+          'red-dark': '#087F7F',
+          black: '#0B1020',
+          'gray-900': '#0B1020',
+          'gray-800': '#142033',
           'gray-700': '#334155',
           'gray-600': '#475569',
           'gray-500': '#64748B',

@@ -5,8 +5,8 @@ import { Zap, Globe, MapPin, Shield, Clock, Headphones, Plane, Warehouse, Truck,
 const features = [
   {
     icon: Zap,
-    title: 'Express Delivery',
-    description: 'Same-day and next-day delivery options available worldwide with guaranteed speed.',
+    title: 'Secure Express',
+    description: 'Priority delivery options with verified records, fast updates, and TRX receipt proof.',
     color: 'bg-dhl-yellow',
     textColor: 'text-dhl-black',
     image: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800&q=80',
@@ -55,7 +55,7 @@ const features = [
 
 // Gallery images
 const galleryImages = [
-  { src: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800&q=80', title: 'Express Sorting Facility' },
+  { src: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800&q=80', title: 'TRX Sorting Facility' },
   { src: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80', title: 'Air Freight Operations' },
   { src: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80', title: 'Ground Fleet' },
   { src: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80', title: 'Package Handling' },
@@ -89,7 +89,7 @@ const Features = () => {
             </span>
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-dhl-black dark:text-white uppercase mb-4">
-            Why Choose <span className="text-dhl-red">DXTI</span>?
+            Why Choose <span className="text-dhl-red">TRX</span>?
           </h2>
           <p className="text-lg text-dhl-gray-600 dark:text-dhl-gray-300 max-w-2xl mx-auto">
             Experience the future of logistics with our cutting-edge technology, 
@@ -178,7 +178,7 @@ const Features = () => {
               {/* Header */}
               <div className="max-w-7xl mx-auto flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-black text-white uppercase">
-                  DXTI <span className="text-dhl-yellow">Gallery</span>
+                  TRX <span className="text-dhl-yellow">Gallery</span>
                 </h2>
                 <button
                   onClick={() => setShowGallery(false)}

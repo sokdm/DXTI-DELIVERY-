@@ -195,7 +195,7 @@ exports.getPackageByTrackingCode = async (req, res) => {
       });
     }
 
-    if (package.status === 'in_transit') {
+    if (package.status === 'in_transit' || package.status === 'shipped') {
       package.updateMovement();
       await package.save();
     }
@@ -218,7 +218,7 @@ exports.updateStatus = async (req, res) => {
     const { id } = req.params;
     const { status, stopReason } = req.body;
 
-    const validStatuses = ['pending', 'in_transit', 'arrived', 'delivered', 'stopped'];
+    const validStatuses = ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped'];
 
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
@@ -261,7 +261,7 @@ exports.updateStatus = async (req, res) => {
 
     if (status === 'stopped') {
       updateData.$set.stopReason = stopReason;
-    } else if (status === 'in_transit') {
+    } else if (status === 'shipped' || status === 'in_transit') {
       updateData.$set.movementProgress = 0;
       updateData.$set.lastMovementUpdate = Date.now();
     } else if (status === 'arrived') {
@@ -436,13 +436,51 @@ exports.downloadReceiptPDF = async (req, res) => {
 
     const pdfBuffer = await generateReceiptPDF(package);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="DXTI-Receipt-${package.trackingCode}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="TRX-Receipt-${package.trackingCode}.pdf"`);
     res.send(pdfBuffer);
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Error generating PDF',
       error: error.message,
+    });
+  }
+};
+
+exports.stampReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pkg = await Package.findById(id);
+
+    if (!pkg) {
+      return res.status(404).json({
+        success: false,
+        message: 'Package not found',
+      });
+    }
+
+    pkg.receipt = {
+      ...(pkg.receipt || {}),
+      stamped: true,
+      stampLabel: String(req.body.stampLabel || 'TRX Verified and Stamped').trim(),
+      stampedAt: new Date(),
+      stampedBy: req.admin?.name || req.admin?.email || 'TRX Admin',
+      signature: String(req.body.signature || 'TRX Logistics Authorized Signature').trim(),
+      updatedAt: new Date(),
+    };
+
+    await pkg.save();
+
+    res.json({
+      success: true,
+      message: 'Receipt stamped successfully',
+      data: pkg,
+    });
+  } catch (error) {
+    console.error('Stamp receipt error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to stamp receipt',
     });
   }
 };
@@ -534,6 +572,7 @@ exports.updatePackage = async (req, res) => {
       }
       return res.status(404).json({ success: false, message: 'Package not found' });
     }
+    const oldStatus = pkg.status;
 
     const editableTextFields = [
       'packageName',
@@ -589,13 +628,13 @@ exports.updatePackage = async (req, res) => {
     }
 
     if (req.body.status !== undefined && req.body.status !== '') {
-      const validStatuses = ['pending', 'in_transit', 'arrived', 'delivered', 'stopped'];
+      const validStatuses = ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped'];
       if (!validStatuses.includes(req.body.status)) {
         return res.status(400).json({ success: false, message: 'Invalid status' });
       }
       pkg.status = req.body.status;
       if (pkg.status === 'delivered') pkg.movementProgress = 1;
-      if (pkg.status === 'in_transit' && !pkg.movementProgress) {
+      if ((pkg.status === 'shipped' || pkg.status === 'in_transit') && !pkg.movementProgress) {
         pkg.movementProgress = 0;
         pkg.lastMovementUpdate = new Date();
       }
@@ -636,6 +675,18 @@ exports.updatePackage = async (req, res) => {
     }
 
     await pkg.save();
+
+    if (oldStatus !== pkg.status) {
+      sendStatusUpdateEmail(pkg, oldStatus)
+        .then(() => {
+          console.log('✅ Status update email sent to', pkg.receiverEmail);
+        })
+        .catch(emailErr => {
+          console.error('❌ Failed to send status email:', emailErr.message);
+          console.error('Full error:', emailErr.response?.data || 'No response data');
+        });
+    }
+
     res.json({ success: true, message: 'Package updated successfully', data: pkg });
   } catch (error) {
     for (const file of [req.files?.packageImage?.[0], req.files?.locationImage?.[0]].filter(Boolean)) {
@@ -680,23 +731,28 @@ exports.sendReceiptEmail = async (req, res) => {
     }
 
     const pdfBuffer = await generateReceiptPDF(package);
+    const supportEmail = process.env.SUPPORT_EMAIL || process.env.TRX_SUPPORT_EMAIL || 'support@trxlogistics.com';
     const html = `
-      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#111827;">
-        <div style="background:#FFCC00;padding:18px 22px;border-top:6px solid #D40511;">
-          <strong style="font-size:24px;color:#D40511;letter-spacing:4px;">DHL</strong>
-        </div>
-        <div style="padding:22px;border:1px solid #e5e7eb;border-top:0;">
-          <h2 style="margin:0 0 10px;color:#111827;">Shipment receipt attached</h2>
-          <p>Hello ${package.receiverName || 'there'},</p>
-          <p>Your DHL-styled shipment receipt for tracking number <strong>${package.trackingCode}</strong> is attached as a PDF.</p>
-          <p style="margin-top:18px;">Support: <a href="mailto:dhld5736@gmail.com">dhld5736@gmail.com</a></p>
+      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.65;color:#111827;background:#EAF3F8;padding:24px;">
+        <div style="max-width:760px;margin:0 auto;background:#ffffff;border:1px solid #DCE6EF;border-radius:12px;overflow:hidden;">
+          <div style="height:6px;background:linear-gradient(90deg,#0B1020 0 34%,#00A6A6 34% 68%,#35E0A1 68%);"></div>
+          <div style="padding:24px 28px;border-bottom:1px solid #DCE6EF;">
+            <strong style="font-size:28px;color:#0B1020;letter-spacing:4px;">TRX</strong>
+            <span style="color:#00A6A6;font-weight:900;letter-spacing:2px;"> LOGISTICS</span>
+          </div>
+          <div style="padding:28px;">
+            <h2 style="margin:0 0 10px;color:#0B1020;">TRX shipment receipt attached</h2>
+            <p>Hello ${package.receiverName || 'there'},</p>
+            <p>Your detailed TRX Logistics receipt for tracking number <strong>${package.trackingCode}</strong> is attached as a PDF.</p>
+            <p style="margin-top:18px;">Support: <a href="mailto:${supportEmail}">${supportEmail}</a></p>
+          </div>
         </div>
       </div>
     `;
 
-    await sendEmail(package.receiverEmail, `Shipment receipt - ${package.trackingCode}`, html, {
+    await sendEmail(package.receiverEmail, `TRX shipment receipt - ${package.trackingCode}`, html, {
       attachments: [{
-        filename: `DHL-Receipt-${package.trackingCode}.pdf`,
+        filename: `TRX-Receipt-${package.trackingCode}.pdf`,
         content: pdfBuffer,
         contentType: 'application/pdf',
       }],
@@ -725,9 +781,15 @@ exports.sendCustomEmail = async (req, res) => {
 
     const subject = String(req.body.subject || '').trim();
     const message = String(req.body.message || '').trim();
+    const recipientType = String(req.body.recipientType || 'receiver').trim();
+    const recipientEmail = recipientType === 'sender'
+      ? pkg.senderEmail
+      : recipientType === 'custom'
+        ? String(req.body.recipientEmail || '').trim()
+        : pkg.receiverEmail;
 
-    if (!isValidEmail(pkg.receiverEmail)) {
-      return res.status(400).json({ success: false, message: 'Receiver email is invalid' });
+    if (!isValidEmail(recipientEmail)) {
+      return res.status(400).json({ success: false, message: 'Recipient email is invalid' });
     }
     if (subject.length < 3 || subject.length > 140) {
       return res.status(400).json({ success: false, message: 'Subject must be between 3 and 140 characters' });
@@ -736,12 +798,17 @@ exports.sendCustomEmail = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Message must be between 5 and 4000 characters' });
     }
 
-    await sendCustomPackageEmail(pkg, subject, message);
+    const info = await sendCustomPackageEmail(pkg, subject, message, recipientEmail);
 
-    res.json({ success: true, message: `Email sent successfully to ${pkg.receiverEmail}` });
+    res.json({
+      success: true,
+      message: `Email sent successfully to ${recipientEmail}`,
+      recipientEmail,
+      messageId: info.messageId,
+    });
   } catch (error) {
     console.error('Custom email error:', error);
-    res.status(500).json({ success: false, message: 'Failed to send custom email' });
+    res.status(500).json({ success: false, message: error.message || 'Failed to send custom email' });
   }
 };
 

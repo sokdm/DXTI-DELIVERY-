@@ -59,7 +59,7 @@ app.use('/api/packages', packageRoutes);
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'DXTI Delivery API is running',
+    message: 'TRX Logistics API is running',
     timestamp: new Date().toISOString(),
   });
 });
@@ -129,7 +129,7 @@ app.post('/api/debug/test-email', async (req, res) => {
   try {
     const { sendShipmentCreatedEmail } = require('./utils/emailService');
     const testPkg = {
-      trackingCode: 'DXT-TEST123',
+      trackingCode: 'TRX-TEST123',
       receiverName: 'Test User',
       receiverEmail: req.body.email || 'wsdmpresh@gmail.com',
       receiverGender: 'male',
@@ -164,7 +164,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`🚀 DXTI Delivery Server running on port ${PORT}`);
+  console.log(`TRX Logistics Server running on port ${PORT}`);
   console.log(`📦 API URL: http://localhost:${PORT}/api`);
   console.log(`🌐 Allowed origins:`, allowedOrigins);
 });

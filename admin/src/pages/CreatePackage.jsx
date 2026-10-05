@@ -23,7 +23,7 @@ const geocodeCity = async (city, country) => {
     const query = encodeURIComponent(`${city}, ${country}`);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`,
-      { headers: { 'User-Agent': 'DXTI-Delivery-App/1.0' } }
+      { headers: { 'User-Agent': 'TRX-Logistics-App/1.0' } }
     );
     const data = await res.json();
     if (data && data.length > 0) {

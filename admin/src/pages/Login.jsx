@@ -40,7 +40,7 @@ const Login = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-admin-primary to-admin-secondary mb-4">
               <Truck className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">DXTI Admin</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">TRX Logistics Admin</h1>
             <p className="text-slate-300">Sign in to manage deliveries</p>
           </div>
 
@@ -56,7 +56,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-admin-primary focus:border-transparent outline-none transition-all"
-                  placeholder="admin@dxti.com"
+                  placeholder="admin@trxlogistics.com"
                   required
                 />
               </div>
@@ -105,7 +105,7 @@ const Login = () => {
           </form>
 
           <div className="mt-6 text-center text-sm text-slate-400">
-            <p>Default: admin@dxti.com / admin123</p>
+            <p>Default: admin@trxlogistics.com / admin123</p>
           </div>
         </div>
       </motion.div>

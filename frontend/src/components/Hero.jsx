@@ -29,7 +29,7 @@ const Hero = () => {
       <div className="absolute inset-0">
         <img
           src="/dhl-airplane.jpg"
-          alt="DHL aircraft at an express logistics hub"
+          alt="TRX aircraft at a fintech logistics hub"
           className="w-full h-full object-cover opacity-45"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-dhl-gray-950 via-dhl-gray-900/85 to-dhl-gray-900/35"></div>

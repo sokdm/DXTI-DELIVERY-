@@ -14,6 +14,12 @@ const statusConfig = {
     label: 'PENDING',
     progress: 10,
   },
+  shipped: {
+    color: 'bg-dhl-red text-white',
+    icon: Truck,
+    label: 'DISPATCHED',
+    progress: 30,
+  },
   in_transit: {
     color: 'bg-blue-500 text-white',
     icon: Truck,
@@ -451,20 +457,20 @@ const TrackingResult = ({ packageData }) => {
         </div>
         <div className="flex flex-wrap gap-3">
           <a 
-            href="https://t.me/Dhl5788"
+            href="https://t.me/TRXLogistics"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-black uppercase tracking-wider rounded-sm hover:bg-blue-600 transition-colors"
           >
             <Send className="w-4 h-4" />
-            Telegram @Dhl5788
+            Telegram @TRXLogistics
           </a>
           <a 
-            href="mailto:dhld5736@gmail.com" 
+            href="mailto:support@trxlogistics.com" 
             className="inline-flex items-center gap-2 px-6 py-3 bg-dhl-yellow text-dhl-black font-black uppercase tracking-wider rounded-sm hover:bg-dhl-yellow-light transition-colors"
           >
             <Mail className="w-4 h-4" />
-            dhld5736@gmail.com
+            support@trxlogistics.com
           </a>
         </div>
       </div>

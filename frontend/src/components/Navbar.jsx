@@ -30,8 +30,8 @@ const Navbar = () => {
               <Truck className="w-6 h-6 text-dhl-black" />
             </motion.div>
             <div className="flex flex-col">
-              <span className="text-lg font-black text-dhl-black dark:text-white uppercase tracking-tight leading-none">DXTI</span>
-              <span className="text-xs font-bold text-dhl-red uppercase tracking-widest leading-none">DELIVERY</span>
+              <span className="text-lg font-black text-dhl-black dark:text-white uppercase tracking-tight leading-none">TRX</span>
+              <span className="text-xs font-bold text-dhl-red uppercase tracking-widest leading-none">LOGISTICS</span>
             </div>
           </Link>
 

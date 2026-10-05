@@ -1,11 +1,13 @@
 const nodemailer = require('nodemailer');
+const { BRAND, trxLogoDataUri } = require('./brand');
+const { generateReceiptPDF } = require('./receiptService');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://dxti-delivery.onrender.com';
-const REPLY_TO_EMAIL = 'dhld5736@gmail.com';
+const REPLY_TO_EMAIL = BRAND.replyToEmail;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || REPLY_TO_EMAIL;
 const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM || SUPPORT_EMAIL;
-const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || process.env.EMAIL_FROM_NAME || 'DHL Express';
-const DHL_LOGO_URL = process.env.EMAIL_LOGO_URL || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/DHL_Logo.svg/512px-DHL_Logo.svg.png';
+const SMTP_FROM_NAME = BRAND.fromName;
+const LOGO_URL = BRAND.logoUrl || trxLogoDataUri(false);
 
 const escapeHtml = (value = '') =>
   String(value)
@@ -44,16 +46,17 @@ const getGreeting = (gender, name) => {
 
 const getServiceType = (pkg) => {
   const price = typeof pkg.deliveryPrice === 'number' ? pkg.deliveryPrice : parseFloat(pkg.deliveryPrice) || 0;
-  if (price >= 200) return 'DHL Express Worldwide';
-  if (price >= 100) return 'DHL Express 12:00';
-  if (price >= 50) return 'DHL Express 10:30';
-  return 'DHL Express 9:00';
+  if (price >= 200) return 'TRX Prime Global';
+  if (price >= 100) return 'TRX Priority Ledger';
+  if (price >= 50) return 'TRX Secure Express';
+  return 'TRX Standard Flow';
 };
 
 const getPieces = (pkg) => Math.max(1, Math.ceil(Number(pkg.packageWeight || 1) / 10));
 
 const statusLabels = {
   pending: 'Package created',
+  shipped: 'Dispatched',
   received: 'Package received',
   processed: 'Package processed',
   shipped: 'Package shipped',
@@ -67,6 +70,7 @@ const statusLabels = {
 const getStatusLabel = (status) => statusLabels[status] || String(status || 'Status updated').replace(/_/g, ' ');
 
 const getTrackingUrl = (pkg) => `${FRONTEND_URL.replace(/\/$/, '')}/track/${encodeURIComponent(pkg.trackingCode || '')}`;
+const qrImageUrl = (pkg) => `https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=8&data=${encodeURIComponent(getTrackingUrl(pkg))}`;
 
 const mailTransporter = () => {
   const { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS } = process.env;
@@ -101,7 +105,7 @@ const detailRow = (label, value) => `
 
 const panel = (label, value, sub = '') => `
   <td valign="top" width="50%" style="padding:8px;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-left:4px solid #D40511;border-radius:4px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F4F8FB;border-left:4px solid #00A6A6;border-radius:8px;">
       <tr><td style="padding:16px;">
         <div style="font-size:10px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.14em;">${escapeHtml(label)}</div>
         <div style="font-size:15px;font-weight:800;color:#111827;line-height:1.45;margin-top:8px;">${escapeHtml(value || 'N/A')}</div>
@@ -111,11 +115,11 @@ const panel = (label, value, sub = '') => `
   </td>`;
 
 const barcodeSection = (pkg) => `
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f9fafb;border:1px dashed #9ca3af;margin-top:8px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F4F8FB;border:1px solid #DCE6EF;margin-top:8px;border-radius:8px;">
     <tr><td style="padding:18px;text-align:center;">
-      <div style="font-family:'Courier New',monospace;font-size:26px;letter-spacing:4px;color:#111827;">|| | ||| || |||| | ||| || |</div>
-      <div style="font-family:'Courier New',monospace;font-size:12px;font-weight:800;color:#111827;letter-spacing:.12em;margin-top:8px;">${escapeHtml(pkg.trackingCode)}</div>
-      <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.14em;margin-top:8px;font-weight:800;">Routing and tracking reference</div>
+      <img src="${qrImageUrl(pkg)}" width="128" height="128" alt="TRX tracking QR code" style="display:block;margin:0 auto 10px;border:0;">
+      <div style="font-family:'Courier New',monospace;font-size:12px;font-weight:800;color:#0B1020;letter-spacing:.12em;margin-top:8px;">${escapeHtml(pkg.trackingCode)}</div>
+      <div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.14em;margin-top:8px;font-weight:800;">Scan for live TRX tracking</div>
     </td></tr>
   </table>`;
 
@@ -130,7 +134,7 @@ const timelineHtml = (pkg) => {
   return items.slice(-8).reverse().map((event, index) => `
     <tr>
       <td width="26" valign="top" style="padding:0 12px 18px 0;">
-        <div style="width:14px;height:14px;border-radius:14px;background:${index === 0 ? '#D40511' : '#FFCC00'};border:3px solid #fff;box-shadow:0 0 0 1px #e5e7eb;"></div>
+        <div style="width:14px;height:14px;border-radius:14px;background:${index === 0 ? '#00A6A6' : '#35E0A1'};border:3px solid #fff;box-shadow:0 0 0 1px #e5e7eb;"></div>
       </td>
       <td valign="top" style="padding:0 0 18px 0;">
         <div style="font-size:14px;font-weight:800;color:#111827;text-transform:capitalize;">${escapeHtml(getStatusLabel(event.status))}</div>
@@ -154,34 +158,34 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title></head>
 <body style="margin:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f4f6;padding:24px 12px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#EAF3F8;padding:28px 12px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
-        <tr><td style="height:6px;background:linear-gradient(90deg,#D40511 0 30%,#FFCC00 30% 70%,#D40511 70%);"></td></tr>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:820px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #DCE6EF;">
+        <tr><td style="height:6px;background:linear-gradient(90deg,#0B1020 0 34%,#00A6A6 34% 68%,#35E0A1 68%);"></td></tr>
         <tr>
-          <td style="background:#FFCC00;padding:18px 28px;">
-            <img src="${DHL_LOGO_URL}" width="132" alt="DHL" style="display:block;border:0;max-width:132px;height:auto;">
+          <td style="background:#ffffff;padding:20px 32px;border-bottom:1px solid #DCE6EF;">
+            <img src="${LOGO_URL}" width="150" alt="TRX Logistics" style="display:block;border:0;max-width:150px;height:auto;">
           </td>
         </tr>
         <tr>
           <td style="padding:34px 28px 22px;">
-            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:#D40511;font-weight:800;">Shipment notification</div>
+            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:#00A6A6;font-weight:800;">TRX shipment notification</div>
             <h1 style="margin:10px 0 8px;font-size:28px;line-height:1.2;color:#111827;">${escapeHtml(title)}</h1>
             <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.7;"><strong>${escapeHtml(greeting)},</strong><br>${escapeHtml(intro)}</p>
           </td>
         </tr>
         <tr>
           <td style="padding:0 28px 26px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#111827;border-radius:8px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0B1020;border-radius:10px;">
               <tr><td style="padding:24px;text-align:center;">
                 <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.18em;font-weight:800;">Tracking number</div>
                 <div style="font-family:'Courier New',monospace;color:#ffffff;font-size:28px;font-weight:900;letter-spacing:.12em;margin-top:8px;word-break:break-word;">${escapeHtml(pkg.trackingCode)}</div>
-                <div style="display:inline-block;margin-top:14px;padding:7px 12px;background:#FFCC00;color:#111827;font-size:12px;font-weight:900;text-transform:uppercase;">${escapeHtml(status)}</div>
+                <div style="display:inline-block;margin-top:14px;padding:7px 12px;background:#35E0A1;color:#0B1020;font-size:12px;font-weight:900;text-transform:uppercase;">${escapeHtml(status)}</div>
               </td></tr>
             </table>
           </td>
         </tr>
-        ${customMessage ? `<tr><td style="padding:0 28px 26px;"><div style="padding:18px 20px;background:#fff7ed;border-left:4px solid #FFCC00;border-radius:4px;color:#374151;font-size:15px;line-height:1.7;white-space:pre-line;">${escapeHtml(customMessage)}</div></td></tr>` : ''}
+        ${customMessage ? `<tr><td style="padding:0 28px 26px;"><div style="padding:18px 20px;background:#ECFDF5;border-left:4px solid #35E0A1;border-radius:8px;color:#374151;font-size:15px;line-height:1.7;white-space:pre-line;">${escapeHtml(customMessage)}</div></td></tr>` : ''}
         <tr>
           <td style="padding:0 20px 20px;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
@@ -219,20 +223,21 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
         <tr><td style="padding:0 28px 28px;"><table role="presentation" cellspacing="0" cellpadding="0" width="100%">${timelineHtml(pkg)}</table></td></tr>
         <tr>
           <td style="padding:0 28px 28px;">
-            <div style="background:#fff7ed;border-left:4px solid #FFCC00;border-radius:4px;padding:16px 18px;color:#92400e;font-size:13px;line-height:1.7;">
-              Keep this email for your shipment records. Payment, customs, or identity checks may be required before release depending on the destination country.
+            <div style="background:#ECFDF5;border-left:4px solid #35E0A1;border-radius:8px;padding:16px 18px;color:#065F46;font-size:13px;line-height:1.7;">
+              Keep this TRX email for your shipment records. Payment, customs, or identity checks may be required before release depending on the destination country.
             </div>
           </td>
         </tr>
         <tr>
           <td align="center" style="padding:0 28px 34px;">
-            <a href="${trackingUrl}" style="display:inline-block;background:#D40511;color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:4px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;">Track package</a>
+            <a href="${trackingUrl}" style="display:inline-block;background:#00A6A6;color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:8px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;">Track package</a>
           </td>
         </tr>
         <tr>
-          <td style="background:#111827;color:#d1d5db;padding:24px 28px;text-align:center;font-size:12px;line-height:1.7;">
-            Replies go to <a href="mailto:${REPLY_TO_EMAIL}" style="color:#FFCC00;text-decoration:none;font-weight:700;">${REPLY_TO_EMAIL}</a><br>
-            Support: <a href="mailto:${SUPPORT_EMAIL}" style="color:#FFCC00;text-decoration:none;font-weight:700;">${SUPPORT_EMAIL}</a>
+          <td style="background:#0B1020;color:#d1d5db;padding:24px 28px;text-align:center;font-size:12px;line-height:1.7;">
+            ${BRAND.name} | ${BRAND.tagline}<br>
+            Replies go to <a href="mailto:${REPLY_TO_EMAIL}" style="color:#35E0A1;text-decoration:none;font-weight:700;">${REPLY_TO_EMAIL}</a><br>
+            Support: <a href="mailto:${SUPPORT_EMAIL}" style="color:#35E0A1;text-decoration:none;font-weight:700;">${SUPPORT_EMAIL}</a>
           </td>
         </tr>
       </table>
@@ -260,7 +265,12 @@ const sendEmail = async (to, subject, html, options = {}) => {
       to,
       subject,
       html,
+      text: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
       replyTo: REPLY_TO_EMAIL,
+      headers: {
+        'X-Entity-Ref-ID': `trx-${Date.now()}`,
+        'List-Unsubscribe': `<mailto:${SUPPORT_EMAIL}>`,
+      },
       attachments: options.attachments,
     });
   } catch (error) {
@@ -270,8 +280,8 @@ const sendEmail = async (to, subject, html, options = {}) => {
     throw error;
   }
 
-  console.log('Email sent to', to, '| Subject:', subject, '| Message:', info.messageId);
-  return { success: true, messageId: info.messageId };
+  console.log('Email sent to', to, '| Subject:', subject, '| Message:', info.messageId, '| Accepted:', info.accepted, '| Rejected:', info.rejected);
+  return { success: true, messageId: info.messageId, accepted: info.accepted, rejected: info.rejected };
 };
 
 const sendShipmentCreatedEmail = async (pkg) => {
@@ -280,16 +290,30 @@ const sendShipmentCreatedEmail = async (pkg) => {
     title: `Package created: ${pkg.trackingCode}`,
     intro: `Hello ${pkg.receiverName || 'there'}, your shipment has been created and is ready for tracking.`,
   });
-  return sendEmail(pkg.receiverEmail, `Shipment created - ${pkg.trackingCode}`, html);
+  return sendEmail(pkg.receiverEmail, `TRX shipment created - ${pkg.trackingCode}`, html);
 };
 
 const sendStatusUpdateEmail = async (pkg, oldStatus) => {
+  const attachments = [];
+  if (['shipped', 'stopped'].includes(pkg.status)) {
+    const pdfBuffer = await generateReceiptPDF(pkg);
+    attachments.push({
+      filename: `TRX-Receipt-${pkg.trackingCode}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf',
+    });
+  }
+
   const html = renderPackageEmail({
     pkg,
     title: `${getStatusLabel(pkg.status)}: ${pkg.trackingCode}`,
-    intro: `Your shipment status changed from ${getStatusLabel(oldStatus)} to ${getStatusLabel(pkg.status)}.`,
+    intro: pkg.status === 'shipped'
+      ? `Your shipment has been dispatched by ${BRAND.name}. The official TRX receipt is attached.`
+      : pkg.status === 'stopped'
+        ? `Your shipment is currently on hold. Reason: ${pkg.stopReason || 'Awaiting administrative review'}. The updated TRX receipt is attached.`
+        : `Your shipment status changed from ${getStatusLabel(oldStatus)} to ${getStatusLabel(pkg.status)}.`,
   });
-  return sendEmail(pkg.receiverEmail, `Shipment update - ${getStatusLabel(pkg.status)} - ${pkg.trackingCode}`, html);
+  return sendEmail(pkg.receiverEmail, `TRX update - ${getStatusLabel(pkg.status)} - ${pkg.trackingCode}`, html, { attachments });
 };
 
 const sendPaymentReminderEmail = async (pkg) => {
@@ -301,14 +325,14 @@ const sendPaymentReminderEmail = async (pkg) => {
   return sendEmail(pkg.receiverEmail, `Action required - ${pkg.trackingCode}`, html);
 };
 
-const sendCustomPackageEmail = async (pkg, subject, message) => {
+const sendCustomPackageEmail = async (pkg, subject, message, recipientEmail = pkg.receiverEmail) => {
   const html = renderPackageEmail({
     pkg,
     title: subject,
-    intro: `A DXTI Delivery administrator sent you a message about shipment ${pkg.trackingCode}.`,
+    intro: `A ${BRAND.name} administrator sent you a message about shipment ${pkg.trackingCode}.`,
     customMessage: message,
   });
-  return sendEmail(pkg.receiverEmail, subject, html);
+  return sendEmail(recipientEmail, subject, html);
 };
 
 module.exports = {

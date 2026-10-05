@@ -120,6 +120,7 @@ const Dashboard = () => {
   const getStatusBadge = (status) => {
     const styles = {
       delivered:   { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: CheckCircle, label: 'Delivered' },
+      shipped:     { bg: 'bg-teal-100', text: 'text-teal-700', icon: Truck, label: 'Dispatched' },
       in_transit:  { bg: 'bg-blue-100', text: 'text-blue-700', icon: Truck, label: 'In Transit' },
       arrived:     { bg: 'bg-purple-100', text: 'text-purple-700', icon: MapPin, label: 'Arrived' },
       stopped:     { bg: 'bg-red-100', text: 'text-red-700', icon: AlertCircle, label: 'Stopped' },

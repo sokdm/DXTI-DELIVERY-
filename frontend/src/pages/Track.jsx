@@ -65,7 +65,7 @@ const Track = () => {
       <main className="pt-20 pb-12">
         <section className="relative overflow-hidden bg-dhl-gray-950 px-4 sm:px-6 lg:px-8 py-12 md:py-16">
           <div className="absolute inset-0">
-            <img src="/dhl-fleet.jpg" alt="DHL fleet" className="h-full w-full object-cover opacity-25" />
+            <img src="/dhl-fleet.jpg" alt="TRX logistics fleet" className="h-full w-full object-cover opacity-25" />
             <div className="absolute inset-0 bg-gradient-to-r from-dhl-gray-950 via-dhl-gray-950/90 to-dhl-gray-950/55"></div>
           </div>
           <div className="relative max-w-6xl mx-auto">
@@ -134,12 +134,12 @@ const Track = () => {
 
             <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-dhl-gray-300">
               <span>Need help?</span>
-              <a href="https://t.me/Dhl5788" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-500 font-bold hover:underline">
-                <Send className="w-4 h-4" /> Telegram @Dhl5788
+              <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-500 font-bold hover:underline">
+                <Send className="w-4 h-4" /> Telegram @TRXLogistics
               </a>
               <span>or</span>
-              <a href="mailto:dhld5736@gmail.com" className="inline-flex items-center gap-1 text-dhl-red font-bold hover:underline">
-                <Mail className="w-4 h-4" /> dhld5736@gmail.com
+              <a href="mailto:support@trxlogistics.com" className="inline-flex items-center gap-1 text-dhl-red font-bold hover:underline">
+                <Mail className="w-4 h-4" /> support@trxlogistics.com
               </a>
             </div>
           </div>
@@ -167,10 +167,10 @@ const Track = () => {
                 <h3 className="text-xl font-black text-dhl-black dark:text-white uppercase mb-2">Package Not Found</h3>
                 <p className="text-dhl-gray-600 dark:text-dhl-gray-300 max-w-md mx-auto mb-6">{error}</p>
                 <div className="flex flex-wrap justify-center gap-3">
-                  <a href="https://t.me/Dhl5788" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold uppercase tracking-wider rounded-sm hover:bg-blue-600 transition-colors">
+                  <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold uppercase tracking-wider rounded-sm hover:bg-blue-600 transition-colors">
                     <Send className="w-4 h-4" /> Telegram Support
                   </a>
-                  <a href="mailto:dhld5736@gmail.com" className="inline-flex items-center gap-2 px-6 py-3 bg-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-sm hover:bg-dhl-yellow-light transition-colors">
+                  <a href="mailto:support@trxlogistics.com" className="inline-flex items-center gap-2 px-6 py-3 bg-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-sm hover:bg-dhl-yellow-light transition-colors">
                     <Mail className="w-4 h-4" /> Email Support
                   </a>
                 </div>

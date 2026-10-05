@@ -1,7 +1,7 @@
 {
-  "name": "dxti-delivery-backend",
+  "name": "trx-logistics-backend",
   "version": "1.0.0",
-  "description": "DXTI Delivery Service Backend API",
+  "description": "TRX Logistics Backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

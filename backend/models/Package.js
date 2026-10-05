@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const generateTrackingCode = () => {
-  const prefix = 'DXT';
+  const prefix = 'TRX';
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
   for (let i = 0; i < 8; i++) {
@@ -57,7 +57,7 @@ const packageSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'in_transit', 'arrived', 'delivered', 'stopped'],
+    enum: ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped'],
     default: 'pending',
   },
   stopReason: { type: String },
@@ -84,7 +84,11 @@ const packageSchema = new mongoose.Schema({
     receiptId: { type: String, unique: true },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-    stamped: { type: Boolean, default: true },
+    stamped: { type: Boolean, default: false },
+    stampLabel: { type: String, default: 'Digitally Verified' },
+    stampedAt: { type: Date },
+    stampedBy: { type: String },
+    signature: { type: String, default: 'TRX Logistics Authorized Signature' },
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
@@ -111,7 +115,7 @@ packageSchema.pre('save', async function(next) {
 
 // UPDATED: Move every 5 minutes instead of 10
 packageSchema.methods.updateMovement = function() {
-  if (this.status === 'in_transit' && this.movementProgress < 1) {
+  if ((this.status === 'in_transit' || this.status === 'shipped') && this.movementProgress < 1) {
     const now = new Date();
     const lastUpdate = this.lastMovementUpdate;
     const diffMinutes = (now - lastUpdate) / (1000 * 60);

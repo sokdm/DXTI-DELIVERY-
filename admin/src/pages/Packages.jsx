@@ -17,7 +17,8 @@ import {
   Mail,
   Send,
   FileText,
-  Loader2
+  Loader2,
+  BadgeCheck
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -58,6 +59,7 @@ const Packages = () => {
   const [emailForm, setEmailForm] = useState({ subject: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
   const [sendingReceiptId, setSendingReceiptId] = useState(null);
+  const [stampingReceiptId, setStampingReceiptId] = useState(null);
 
   useEffect(() => {
     fetchPackages();
@@ -164,7 +166,7 @@ const Packages = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `DXTI-Receipt-${trackingCode}.pdf`;
+      a.download = `TRX-Receipt-${trackingCode}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -199,6 +201,26 @@ const Packages = () => {
       toast.error(error.response?.data?.message || 'Failed to send receipt');
     } finally {
       setSendingReceiptId(null);
+    }
+  };
+
+  const handleStampReceipt = async (packageId) => {
+    if (stampingReceiptId) return;
+    try {
+      setStampingReceiptId(packageId);
+      const res = await axios.patch(`${API_URL}/packages/${packageId}/receipt/stamp`, {
+        stampLabel: 'TRX Verified and Stamped',
+        signature: 'TRX Logistics Authorized Signature',
+      }, {
+        headers: getAuthHeaders(),
+      });
+      toast.success(res.data.message || 'Receipt stamped');
+      fetchPackages();
+    } catch (error) {
+      console.error('Stamp receipt error:', error);
+      toast.error(error.response?.data?.message || 'Failed to stamp receipt');
+    } finally {
+      setStampingReceiptId(null);
     }
   };
 
@@ -302,6 +324,8 @@ const Packages = () => {
     setEmailForm({
       subject: `Update for shipment ${pkg.trackingCode}`,
       message: '',
+      recipientType: 'receiver',
+      recipientEmail: pkg.receiverEmail || '',
     });
     setShowEmailModal(true);
   };
@@ -315,7 +339,7 @@ const Packages = () => {
       toast.success(response.data.message || 'Email sent');
       setShowEmailModal(false);
       setSelectedPackage(null);
-      setEmailForm({ subject: '', message: '' });
+      setEmailForm({ subject: '', message: '', recipientType: 'receiver', recipientEmail: '' });
     } catch (error) {
       console.error('Send email error:', error);
       toast.error(error.response?.data?.message || 'Failed to send email');
@@ -334,6 +358,7 @@ const Packages = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'delivered': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'shipped': return <Truck className="w-5 h-5 text-teal-500" />;
       case 'in_transit': return <Truck className="w-5 h-5 text-blue-500" />;
       case 'stopped': return <AlertCircle className="w-5 h-5 text-red-500" />;
       case 'arrived': return <CheckCircle className="w-5 h-5 text-purple-500" />;
@@ -344,6 +369,7 @@ const Packages = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'delivered': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'shipped': return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300';
       case 'in_transit': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
       case 'stopped': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
       case 'arrived': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
@@ -369,6 +395,7 @@ const Packages = () => {
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
+            <option value="shipped">Shipped / Dispatched</option>
             <option value="in_transit">In Transit</option>
             <option value="arrived">Arrived</option>
             <option value="delivered">Delivered</option>
@@ -494,6 +521,14 @@ const Packages = () => {
                           <Download className="w-5 h-5" />
                         </button>
                         <button
+                          onClick={() => handleStampReceipt(pkg._id)}
+                          disabled={stampingReceiptId === pkg._id}
+                          className="p-2 text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={pkg.receipt?.stamped ? 'Stamp Receipt Again' : 'Stamp Receipt'}
+                        >
+                          {stampingReceiptId === pkg._id ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
+                        </button>
+                        <button
                           onClick={() => handleSendReceipt(pkg._id)}
                           disabled={sendingReceiptId === pkg._id}
                           className="p-2 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -579,6 +614,7 @@ const Packages = () => {
                     className="admin-input"
                   >
                     <option value="pending">Pending</option>
+                    <option value="shipped">Shipped / Dispatched</option>
                     <option value="in_transit">In Transit</option>
                     <option value="arrived">Arrived</option>
                     <option value="delivered">Delivered</option>
@@ -819,6 +855,7 @@ const Packages = () => {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Status</label>
                   <select value={editForm.status || 'pending'} onChange={(e) => handleEditChange('status', e.target.value)} className="admin-input">
                     <option value="pending">Pending</option>
+                    <option value="shipped">Shipped / Dispatched</option>
                     <option value="in_transit">In Transit</option>
                     <option value="arrived">Arrived</option>
                     <option value="delivered">Delivered</option>
@@ -882,8 +919,44 @@ const Packages = () => {
               </div>
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Recipient</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">{selectedPackage.receiverEmail}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Package emails</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Receiver: {selectedPackage.receiverEmail}</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Sender: {selectedPackage.senderEmail}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Send To</label>
+                  <select
+                    value={emailForm.recipientType || 'receiver'}
+                    onChange={(e) => {
+                      const recipientType = e.target.value;
+                      setEmailForm({
+                        ...emailForm,
+                        recipientType,
+                        recipientEmail: recipientType === 'sender' ? selectedPackage.senderEmail : recipientType === 'receiver' ? selectedPackage.receiverEmail : '',
+                      });
+                    }}
+                    className="admin-input"
+                  >
+                    <option value="receiver">Receiver email</option>
+                    <option value="sender">Sender email</option>
+                    <option value="custom">Custom email</option>
+                  </select>
+                </div>
+                {emailForm.recipientType === 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Custom Recipient Email</label>
+                    <input
+                      type="email"
+                      value={emailForm.recipientEmail || ''}
+                      onChange={(e) => setEmailForm({ ...emailForm, recipientEmail: e.target.value })}
+                      className="admin-input"
+                      placeholder="example@email.com"
+                    />
+                  </div>
+                )}
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900">
+                  <p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">Final recipient</p>
+                  <p className="font-semibold text-blue-950 dark:text-blue-100">{emailForm.recipientEmail || selectedPackage.receiverEmail}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subject</label>
@@ -895,7 +968,7 @@ const Packages = () => {
                 </div>
                 <div className="flex gap-3 justify-end pt-2">
                   <button onClick={() => setShowEmailModal(false)} className="admin-btn-secondary">Cancel</button>
-                  <button onClick={handleSendCustomEmail} disabled={submitting || !emailForm.subject || !emailForm.message} className="admin-btn inline-flex items-center gap-2 disabled:opacity-50">
+                  <button onClick={handleSendCustomEmail} disabled={submitting || !emailForm.subject || !emailForm.message || !emailForm.recipientEmail} className="admin-btn inline-flex items-center gap-2 disabled:opacity-50">
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Send Email
                   </button>

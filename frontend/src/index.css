@@ -17,7 +17,7 @@
 }
 
 @layer components {
-  /* DHL Yellow accent button */
+  /* TRX accent button */
   .btn-dhl {
     @apply px-6 py-3 bg-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-sm shadow-lg hover:bg-dhl-yellow-light hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
   }
@@ -145,14 +145,14 @@
   }
 }
 
-/* DHL stripe pattern */
+/* TRX stripe pattern */
 .dhl-stripe {
   background: repeating-linear-gradient(
     45deg,
-    #FFCC00,
-    #FFCC00 10px,
-    #D40511 10px,
-    #D40511 20px
+    #35E0A1,
+    #35E0A1 10px,
+    #00A6A6 10px,
+    #00A6A6 20px
   );
 }
 
@@ -168,5 +168,5 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(135deg, #FFCC00 50%, #D40511 50%);
+  background: linear-gradient(135deg, #35E0A1 50%, #00A6A6 50%);
 }

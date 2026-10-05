@@ -29,7 +29,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `DXTI-Receipt-${packageData.trackingCode}.pdf`;
+      a.download = `TRX-Receipt-${packageData.trackingCode}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -91,12 +91,12 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#D40511] to-[#E31B23] p-4 text-center relative shrink-0">
+            <div className="bg-gradient-to-r from-[#0B1020] via-[#00A6A6] to-[#35E0A1] p-4 text-center relative shrink-0">
               <div className="flex items-center justify-center gap-2">
                 <Truck className="w-6 h-6 text-white" />
                 <div>
-                  <h2 className="text-xl font-black text-white tracking-wider">DXTI</h2>
-                  <p className="text-[10px] text-[#FFCC00] font-bold tracking-widest uppercase">Express Delivery</p>
+                  <h2 className="text-xl font-black text-white tracking-wider">TRX</h2>
+                  <p className="text-[10px] text-emerald-100 font-bold tracking-widest uppercase">Logistics</p>
                 </div>
               </div>
               <p className="text-white/70 text-[10px] mt-1">Receipt: {packageData.receipt?.receiptId || 'N/A'}</p>
@@ -105,8 +105,8 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
             {/* Scrollable Content */}
             <div className="overflow-y-auto p-5 space-y-4">
               {/* Tracking */}
-              <div className="bg-gradient-to-r from-[#FFF8E1] to-[#FFECB3] rounded-xl p-4 text-center border-2 border-dashed border-[#FFCC00]">
-                <p className="text-[10px] text-[#B8860B] font-bold uppercase tracking-widest mb-1">Tracking Number</p>
+              <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 rounded-xl p-4 text-center border-2 border-dashed border-[#00A6A6]">
+                <p className="text-[10px] text-[#047857] font-bold uppercase tracking-widest mb-1">Tracking Number</p>
                 <p className="text-xl font-black text-[#1f2937] font-mono tracking-wider">{packageData.trackingCode}</p>
               </div>
 
@@ -121,8 +121,8 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
                   <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-[#D40511]/20">
-                    <User className="w-3 h-3 text-[#D40511]" />
-                    <h3 className="text-[10px] font-black text-[#D40511] uppercase tracking-wider">Sender</h3>
+                    <User className="w-3 h-3 text-[#00A6A6]" />
+                    <h3 className="text-[10px] font-black text-[#00A6A6] uppercase tracking-wider">Sender</h3>
                   </div>
                   <p className="text-sm font-bold text-slate-800 leading-tight">{packageData.senderName}</p>
                   <div className="flex items-center gap-1 mt-1">
@@ -137,8 +137,8 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
 
                 <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
                   <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-[#FFCC00]/40">
-                    <User className="w-3 h-3 text-[#D40511]" />
-                    <h3 className="text-[10px] font-black text-[#D40511] uppercase tracking-wider">Receiver</h3>
+                    <User className="w-3 h-3 text-[#00A6A6]" />
+                    <h3 className="text-[10px] font-black text-[#00A6A6] uppercase tracking-wider">Receiver</h3>
                   </div>
                   <p className="text-sm font-bold text-slate-800 leading-tight">{packageData.receiverName}</p>
                   <div className="flex items-center gap-1 mt-1">
@@ -155,8 +155,8 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
               {/* Package Info - Compact */}
               <div className="bg-white rounded-lg p-3 border-2 border-slate-200">
                 <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-slate-100">
-                  <Package className="w-3 h-3 text-[#D40511]" />
-                  <h3 className="text-[10px] font-black text-[#D40511] uppercase tracking-wider">Package</h3>
+                  <Package className="w-3 h-3 text-[#00A6A6]" />
+                  <h3 className="text-[10px] font-black text-[#00A6A6] uppercase tracking-wider">Package</h3>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-slate-50 rounded-md p-2">
@@ -169,24 +169,24 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
                   </div>
                   <div className="bg-slate-50 rounded-md p-2">
                     <p className="text-[9px] text-slate-400 uppercase font-semibold">Price</p>
-                    <p className="text-sm font-bold text-[#D40511]">{money}</p>
+                    <p className="text-sm font-bold text-[#00A6A6]">{money}</p>
                   </div>
                 </div>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">{packageData.packageDescription}</p>
               </div>
 
               {/* Amount - Compact */}
-              <div className="bg-gradient-to-r from-[#FFF8E1] to-[#FFECB3] rounded-xl p-4 border-2 border-[#FFCC00]">
+              <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 rounded-xl p-4 border-2 border-[#00A6A6]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-[#B8860B] uppercase tracking-widest font-black">Shipping Amount</p>
-                    <p className="text-[10px] text-[#B8860B]/70 mt-0.5">Pay before delivery</p>
+                    <p className="text-[10px] text-[#047857] uppercase tracking-widest font-black">Shipping Amount</p>
+                    <p className="text-[10px] text-[#047857]/70 mt-0.5">Pay before delivery</p>
                   </div>
-                  <p className="text-2xl font-black text-[#D40511]">{money}</p>
+                  <p className="text-2xl font-black text-[#00A6A6]">{money}</p>
                 </div>
                 <div className="mt-2 pt-2 border-t border-[#FFCC00]/30 flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-[#B8860B]" />
-                  <p className="text-[10px] text-[#B8860B] font-medium">Payment required before package release. Contact sender.</p>
+                  <p className="text-[10px] text-[#047857] font-medium">Payment may be required before package release. Contact TRX support.</p>
                 </div>
               </div>
 
@@ -202,7 +202,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={handlePrint}
-                  className="flex items-center justify-center gap-1.5 bg-[#D40511] hover:bg-[#B0040E] text-white py-2.5 rounded-xl font-bold text-xs transition-all"
+                  className="flex items-center justify-center gap-1.5 bg-[#00A6A6] hover:bg-[#087F7F] text-white py-2.5 rounded-xl font-bold text-xs transition-all"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   Print
