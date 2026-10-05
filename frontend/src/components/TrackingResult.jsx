@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, MapPin, Calendar, Clock, Truck, CheckCircle, 
   AlertTriangle, ChevronDown, ChevronUp, X,
-  Weight, DollarSign, User, Mail, Box, Navigation, Send
+  Weight, DollarSign, User, Mail, Box, Navigation, Send, BadgeCheck, QrCode, FileCheck2
 } from 'lucide-react';
 import MapTracker from './MapTracker';
 
@@ -114,6 +114,9 @@ const TrackingResult = ({ packageData }) => {
   const receiverAddress = formatAddress(receiver.address, receiver.city, receiver.country);
 
   const timeline = packageData.statusHistory || packageData.timeline || [];
+  const receipt = packageData.receipt || {};
+  const receiptStamp = receipt.stamped ? (receipt.stampLabel || 'TRX Verified') : 'Awaiting TRX stamp';
+  const receiptSignature = receipt.signature || 'TRX Logistics Authorized Signature';
 
   return (
     <motion.div
@@ -188,6 +191,24 @@ const TrackingResult = ({ packageData }) => {
               transition={{ duration: 1.5, ease: "easeOut" }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-3 mb-6">
+            <div className="bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 border-l-4 border-dhl-yellow">
+              <BadgeCheck className="w-6 h-6 text-dhl-yellow mb-2" />
+              <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Receipt Stamp</div>
+              <div className="font-black text-dhl-black dark:text-white">{receiptStamp}</div>
+            </div>
+            <div className="bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 border-l-4 border-dhl-red">
+              <FileCheck2 className="w-6 h-6 text-dhl-red mb-2" />
+              <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Receipt ID</div>
+              <div className="font-black text-dhl-black dark:text-white break-all">{receipt.receiptId || 'N/A'}</div>
+            </div>
+            <div className="bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 border-l-4 border-dhl-yellow">
+              <QrCode className="w-6 h-6 text-dhl-yellow mb-2" />
+              <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">TRX Signature</div>
+              <div className="font-black text-dhl-black dark:text-white">{receiptSignature}</div>
+            </div>
           </div>
 
           <div className="flex items-center justify-between bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,18 +9,30 @@ import {
   Menu,
   X,
   Truck,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('trx_admin_theme') || 'light');
   const { admin, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('trx_admin_theme', theme);
+  }, [theme]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const toggleTheme = () => {
+    setTheme((current) => current === 'dark' ? 'light' : 'dark');
   };
 
   const navItems = [
@@ -169,6 +181,14 @@ const Layout = () => {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={toggleTheme}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-admin-primary transition-colors"
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-admin-secondary" /> : <Moon className="w-4 h-4 text-admin-primary" />}
+                <span className="hidden sm:inline text-sm font-semibold">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+              </button>
               <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm text-slate-600 dark:text-slate-300">System Online</span>

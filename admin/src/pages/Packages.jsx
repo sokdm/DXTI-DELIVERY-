@@ -355,6 +355,58 @@ const Packages = () => {
     pkg.receiverName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const packageStats = {
+    visible: filteredPackages.length,
+    dispatched: filteredPackages.filter((pkg) => pkg.status === 'shipped').length,
+    holds: filteredPackages.filter((pkg) => pkg.status === 'stopped').length,
+    stamped: filteredPackages.filter((pkg) => pkg.receipt?.stamped).length,
+  };
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Tracking Code',
+      'Receipt ID',
+      'Package',
+      'Status',
+      'Stamped',
+      'Sender',
+      'Receiver',
+      'Receiver Email',
+      'Origin',
+      'Destination',
+      'Amount',
+      'Currency',
+      'Updated',
+    ];
+    const rows = filteredPackages.map((pkg) => [
+      pkg.trackingCode,
+      pkg.receipt?.receiptId || '',
+      pkg.packageName,
+      pkg.status,
+      pkg.receipt?.stamped ? 'Yes' : 'No',
+      pkg.senderName,
+      pkg.receiverName,
+      pkg.receiverEmail,
+      [pkg.senderCity, pkg.senderCountry].filter(Boolean).join(', '),
+      [pkg.receiverCity, pkg.receiverCountry].filter(Boolean).join(', '),
+      pkg.deliveryPrice,
+      pkg.deliveryCurrency,
+      pkg.updatedAt ? new Date(pkg.updatedAt).toISOString() : '',
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TRX-Shipments-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'delivered': return <CheckCircle className="w-5 h-5 text-green-500" />;
@@ -387,7 +439,7 @@ const Packages = () => {
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
           All Packages
         </h2>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -401,6 +453,14 @@ const Packages = () => {
             <option value="delivered">Delivered</option>
             <option value="stopped">Stopped</option>
           </select>
+          <button
+            onClick={handleExportCSV}
+            disabled={!filteredPackages.length}
+            className="admin-btn-secondary inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
         </div>
       </div>
 
@@ -413,6 +473,21 @@ const Packages = () => {
           placeholder="Search by tracking code, name, sender, or receiver..."
           className="admin-input pl-12"
         />
+      </div>
+
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {[
+          ['Visible Shipments', packageStats.visible, 'Filtered operations in this view'],
+          ['Dispatched', packageStats.dispatched, 'Status emails include receipt PDF'],
+          ['On Hold', packageStats.holds, 'Requires stop reason and customer notice'],
+          ['Stamped Receipts', packageStats.stamped, 'TRX verified receipt records'],
+        ].map(([label, value, note]) => (
+          <div key={label} className="admin-card p-4">
+            <p className="text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">{label}</p>
+            <p className="text-3xl font-black text-slate-900 dark:text-white mt-2">{value}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{note}</p>
+          </div>
+        ))}
       </div>
 
       <div className="admin-card overflow-hidden">
@@ -508,7 +583,7 @@ const Packages = () => {
                         </button>
                         <button
                           onClick={() => handlePrintReceipt(pkg._id)}
-                          className="p-2 text-slate-400 hover:text-[#D40511] transition-colors"
+                          className="p-2 text-slate-400 hover:text-[#00A6A6] transition-colors"
                           title="Print Receipt"
                         >
                           <Printer className="w-5 h-5" />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, MapPinned, FileText, ShieldCheck, Bell, Plane, Warehouse, Truck, Camera, CreditCard, Globe2, RadioTower, LockKeyhole, Headphones } from 'lucide-react';
+import { BarChart3, MapPinned, FileText, ShieldCheck, Bell, Plane, Warehouse, Truck, Camera, CreditCard, Globe2, RadioTower, LockKeyhole, Headphones, BadgeCheck, QrCode, Workflow } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
@@ -47,6 +47,12 @@ const trustItems = [
   { icon: LockKeyhole, title: 'Protected admin access', text: 'Dashboard actions are guarded so package data and receipts stay controlled.' },
   { icon: Globe2, title: 'International-ready', text: 'Routes, currencies, addresses, and destination details support global shipments.' },
   { icon: Headphones, title: 'Customer support flow', text: 'Tracking pages and email updates guide customers to the right shipment record.' },
+];
+
+const platformLayers = [
+  { icon: Workflow, title: 'Admin command layer', text: 'Create, edit, stamp, export, stop, dispatch, email, and audit shipment records from one protected dashboard.' },
+  { icon: QrCode, title: 'Receipt verification layer', text: 'Every TRX receipt can carry a QR tracking link, receipt ID, stamp label, signature, and dispatch status.' },
+  { icon: BadgeCheck, title: 'Customer trust layer', text: 'Tracking pages show route progress, receipt proof, package details, stop reasons, and support-ready context.' },
 ];
 
 const Home = () => {
@@ -196,6 +202,31 @@ const Home = () => {
                   <p className="text-dhl-gray-300 leading-relaxed">{item.text}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+        <section className="bg-white dark:bg-dhl-gray-900 py-24">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-[.85fr_1.15fr] gap-12 items-start">
+              <div>
+                <div className="text-dhl-red font-black uppercase tracking-widest text-sm mb-4">TRX command layer</div>
+                <h2 className="text-4xl md:text-5xl font-black uppercase text-dhl-black dark:text-white leading-tight mb-5">
+                  Built like fintech, operated like logistics
+                </h2>
+                <p className="text-dhl-gray-600 dark:text-dhl-gray-300 text-lg leading-relaxed">
+                  TRX blends shipment operations with proof systems: receipt IDs, currency-aware charges,
+                  QR verification, branded emails, admin stamps, and detailed customer tracking.
+                </p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-5">
+                {platformLayers.map((item) => (
+                  <div key={item.title} className="bg-dhl-gray-50 dark:bg-dhl-gray-800 p-6 border border-dhl-gray-200 dark:border-dhl-gray-700 border-t-4 border-dhl-yellow">
+                    <item.icon className="w-9 h-9 text-dhl-red mb-5" />
+                    <h3 className="text-xl font-black uppercase text-dhl-black dark:text-white mb-3">{item.title}</h3>
+                    <p className="text-dhl-gray-600 dark:text-dhl-gray-300 text-sm leading-relaxed">{item.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>

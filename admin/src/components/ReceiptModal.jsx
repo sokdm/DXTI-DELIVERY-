@@ -120,7 +120,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
               {/* Sender & Receiver - Compact */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                  <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-[#D40511]/20">
+                  <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-[#00A6A6]/20">
                     <User className="w-3 h-3 text-[#00A6A6]" />
                     <h3 className="text-[10px] font-black text-[#00A6A6] uppercase tracking-wider">Sender</h3>
                   </div>
@@ -136,7 +136,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
                 </div>
 
                 <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                  <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-[#FFCC00]/40">
+                  <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-[#35E0A1]/40">
                     <User className="w-3 h-3 text-[#00A6A6]" />
                     <h3 className="text-[10px] font-black text-[#00A6A6] uppercase tracking-wider">Receiver</h3>
                   </div>
@@ -184,7 +184,7 @@ const ReceiptModal = ({ isOpen, onClose, packageData }) => {
                   </div>
                   <p className="text-2xl font-black text-[#00A6A6]">{money}</p>
                 </div>
-                <div className="mt-2 pt-2 border-t border-[#FFCC00]/30 flex items-center gap-1.5">
+                <div className="mt-2 pt-2 border-t border-[#35E0A1]/30 flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-[#B8860B]" />
                   <p className="text-[10px] text-[#047857] font-medium">Payment may be required before package release. Contact TRX support.</p>
                 </div>

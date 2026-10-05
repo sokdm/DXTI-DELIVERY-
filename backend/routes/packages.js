@@ -26,6 +26,7 @@ router.get('/stats/dashboard', auth, getDashboardStats);
 router.get('/:id/receipt', auth, getReceipt);
 router.get('/:id/receipt/pdf', auth, downloadReceiptPDF);
 router.post('/:id/receipt/email', auth, sendReceiptEmail);
+router.post('/:id/receipt/stamp', auth, stampReceipt);
 router.patch('/:id/receipt/stamp', auth, stampReceipt);
 router.patch('/:id/status', auth, updateStatus);
 router.patch('/:id/location', auth, upload.single('locationImage'), handleUploadError, updateLocation);

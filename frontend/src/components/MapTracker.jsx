@@ -58,14 +58,14 @@ const createPlaneIcon = (isStopped, isArrived) => {
   return L.divIcon({
     className: 'custom-plane-icon',
     html: `<div style="
-      background: ${isStopped ? 'linear-gradient(135deg, #D40511, #a0040d)' : isArrived ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)'};
+      background: ${isStopped ? 'linear-gradient(135deg, #00A6A6, #087F7F)' : isArrived ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)'};
       width: 44px;
       height: 44px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 15px ${isStopped ? 'rgba(212, 5, 17, 0.5)' : isArrived ? 'rgba(16, 185, 129, 0.5)' : 'rgba(14, 165, 233, 0.5)'};
+      box-shadow: 0 4px 15px ${isStopped ? 'rgba(0, 166, 166, 0.5)' : isArrived ? 'rgba(16, 185, 129, 0.5)' : 'rgba(14, 165, 233, 0.5)'};
       border: 3px solid white;
       animation: ${isStopped ? 'none' : 'pulse 2s infinite'};
     ">
@@ -111,14 +111,14 @@ const createStopIcon = () => {
   return L.divIcon({
     className: 'custom-stop-icon',
     html: `<div style="
-      background: linear-gradient(135deg, #D40511, #a0040d);
+      background: linear-gradient(135deg, #00A6A6, #087F7F);
       width: 40px;
       height: 40px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 15px rgba(212, 5, 17, 0.5);
+      box-shadow: 0 4px 15px rgba(0, 166, 166, 0.5);
       border: 3px solid white;
       animation: shake 0.5s infinite;
     ">
@@ -452,7 +452,7 @@ const MapTracker = ({ currentLocation, destination, origin, status, progress, st
           {pathPoints.length > 0 && (
             <Polyline
               positions={pathPoints}
-              color={isStopped ? '#D40511' : isArrived || isDelivered ? '#10b981' : '#0ea5e9'}
+              color={isStopped ? '#00A6A6' : isArrived || isDelivered ? '#10b981' : '#0ea5e9'}
               weight={5}
               opacity={0.9}
               dashArray={isStopped ? '10, 10' : null}

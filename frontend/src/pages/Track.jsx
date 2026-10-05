@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowLeft, Loader2, PackageX, Truck, Mail, Send, MapPin, ShieldCheck, Clock3, Radio } from 'lucide-react';
+import { Search, ArrowLeft, Loader2, PackageX, Truck, Mail, Send, MapPin, ShieldCheck, Clock3, Radio, BadgeCheck, FileCheck2, QrCode } from 'lucide-react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -15,6 +15,12 @@ const trustItems = [
   { icon: MapPin, label: 'Route map visibility' },
   { icon: Clock3, label: 'Timeline history' },
   { icon: ShieldCheck, label: 'Secure package records' },
+];
+
+const insightItems = [
+  { icon: BadgeCheck, title: 'Receipt stamp', text: 'See whether the shipment receipt has been verified and stamped by TRX operations.' },
+  { icon: QrCode, title: 'QR-ready proof', text: 'TRX receipts include scan-ready tracking proof for customer service and verification.' },
+  { icon: FileCheck2, title: 'Full shipment record', text: 'Review sender, receiver, amount, package image, route, location, and stop reason when available.' },
 ];
 
 const Track = () => {
@@ -146,6 +152,15 @@ const Track = () => {
         </section>
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            {insightItems.map((item) => (
+              <div key={item.title} className="bg-white dark:bg-dhl-gray-900 border border-dhl-gray-200 dark:border-dhl-gray-700 p-5 border-t-4 border-dhl-yellow">
+                <item.icon className="w-7 h-7 text-dhl-red mb-3" />
+                <h2 className="text-lg font-black uppercase text-dhl-black dark:text-white">{item.title}</h2>
+                <p className="text-sm text-dhl-gray-600 dark:text-dhl-gray-300 mt-2 leading-relaxed">{item.text}</p>
+              </div>
+            ))}
+          </div>
 
           <AnimatePresence mode="wait">
             {loading && (
