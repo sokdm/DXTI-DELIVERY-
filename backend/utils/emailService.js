@@ -65,6 +65,7 @@ const statusLabels = {
   arrived: 'Arrived at facility',
   out_for_delivery: 'Out for delivery',
   delivered: 'Delivered',
+  cancelled: 'Cancelled',
 };
 
 const getStatusLabel = (status) => statusLabels[status] || String(status || 'Status updated').replace(/_/g, ' ');
@@ -153,41 +154,47 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
   const greeting = getGreeting(pkg.receiverGender, pkg.receiverName);
   const serviceType = getServiceType(pkg);
   const pieces = getPieces(pkg);
+  const preheader = `${getStatusLabel(pkg.status)} · Tracking ${pkg.trackingCode}`;
+  const statusColor = pkg.status === 'stopped' || pkg.status === 'cancelled' ? '#FCA5A5' : '#6EE7B7';
 
   return `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title></head>
 <body style="margin:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#EAF3F8;padding:28px 12px;">
+  <div style="display:none;font-size:1px;color:#EAF3F8;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${escapeHtml(preheader)} &#847; &#847; &#847; &#847;</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#EEF3F8;padding:36px 14px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:820px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #DCE6EF;">
-        <tr><td style="height:6px;background:linear-gradient(90deg,#0B1020 0 34%,#00A6A6 34% 68%,#35E0A1 68%);"></td></tr>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #DCE6EF;box-shadow:0 18px 55px rgba(11,16,32,.10);">
+        <tr><td style="height:5px;background:#00A6A6;"></td></tr>
         <tr>
-          <td style="background:#ffffff;padding:20px 32px;border-bottom:1px solid #DCE6EF;">
-            <img src="${LOGO_URL}" width="150" alt="TRX Logistics" style="display:block;border:0;max-width:150px;height:auto;">
+          <td style="background:#ffffff;padding:22px 30px;border-bottom:1px solid #E8EEF4;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+              <td><img src="${LOGO_URL}" width="150" alt="TRX Logistics" style="display:block;border:0;max-width:150px;height:auto;"></td>
+              <td align="right" style="font-size:10px;font-weight:800;letter-spacing:.14em;color:#64748B;text-transform:uppercase;">Shipment update<br><span style="display:inline-block;margin-top:5px;color:#00A6A6;">Secure tracking</span></td>
+            </tr></table>
           </td>
         </tr>
         <tr>
-          <td style="padding:34px 28px 22px;">
-            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:#00A6A6;font-weight:800;">TRX shipment notification</div>
-            <h1 style="margin:10px 0 8px;font-size:28px;line-height:1.2;color:#111827;">${escapeHtml(title)}</h1>
-            <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.7;"><strong>${escapeHtml(greeting)},</strong><br>${escapeHtml(intro)}</p>
+          <td style="padding:34px 30px 24px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:#008C91;font-weight:800;">${escapeHtml(BRAND.name)} · shipment notification</div>
+            <h1 style="margin:11px 0 10px;font-size:27px;line-height:1.25;color:#0B1020;">${escapeHtml(title)}</h1>
+            <p style="margin:0;color:#526174;font-size:15px;line-height:1.75;"><strong style="color:#0B1020;">${escapeHtml(greeting)},</strong><br>${escapeHtml(intro)}</p>
           </td>
         </tr>
         <tr>
-          <td style="padding:0 28px 26px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0B1020;border-radius:10px;">
-              <tr><td style="padding:24px;text-align:center;">
-                <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.18em;font-weight:800;">Tracking number</div>
-                <div style="font-family:'Courier New',monospace;color:#ffffff;font-size:28px;font-weight:900;letter-spacing:.12em;margin-top:8px;word-break:break-word;">${escapeHtml(pkg.trackingCode)}</div>
-                <div style="display:inline-block;margin-top:14px;padding:7px 12px;background:#35E0A1;color:#0B1020;font-size:12px;font-weight:900;text-transform:uppercase;">${escapeHtml(status)}</div>
+          <td style="padding:0 30px 26px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0B1020;border-radius:16px;">
+              <tr><td style="padding:27px 20px;text-align:center;">
+                <div style="font-size:10px;color:#A9B6C7;text-transform:uppercase;letter-spacing:.2em;font-weight:800;">Your tracking number</div>
+                <div style="font-family:'Courier New',monospace;color:#ffffff;font-size:27px;font-weight:900;letter-spacing:.12em;margin-top:10px;word-break:break-word;">${escapeHtml(pkg.trackingCode)}</div>
+                <div style="display:inline-block;margin-top:16px;padding:8px 13px;background:${statusColor};color:#0B1020;border-radius:999px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;">${escapeHtml(status)}</div>
               </td></tr>
             </table>
           </td>
         </tr>
-        ${customMessage ? `<tr><td style="padding:0 28px 26px;"><div style="padding:18px 20px;background:#ECFDF5;border-left:4px solid #35E0A1;border-radius:8px;color:#374151;font-size:15px;line-height:1.7;white-space:pre-line;">${escapeHtml(customMessage)}</div></td></tr>` : ''}
+        ${customMessage ? `<tr><td style="padding:0 30px 26px;"><div style="padding:18px 20px;background:#F0FDFA;border:1px solid #CCFBF1;border-left:4px solid #00A6A6;border-radius:12px;color:#374151;font-size:15px;line-height:1.7;white-space:pre-line;">${escapeHtml(customMessage)}</div></td></tr>` : ''}
         <tr>
-          <td style="padding:0 20px 20px;">
+          <td style="padding:0 22px 24px;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
               <tr>
                 ${panel('Service', serviceType, `${pieces} piece${pieces > 1 ? 's' : ''} • ${pkg.packageWeight || 0} kg`)}
@@ -201,9 +208,10 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
           </td>
         </tr>
         <tr>
-          <td style="padding:0 28px 28px;">
+          <td style="padding:0 30px 28px;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
               ${detailRow('Package', pkg.packageName)}
+              ${pkg.receipt?.receiptId ? detailRow('Receipt reference', pkg.receipt.receiptId) : ''}
               ${detailRow('Description', pkg.packageDescription)}
               ${detailRow('Sender', pkg.senderName)}
               ${detailRow('Receiver', pkg.receiverName)}
@@ -219,25 +227,27 @@ const renderPackageEmail = ({ pkg, title, intro, customMessage }) => {
             </table>
           </td>
         </tr>
-        <tr><td style="padding:0 28px 28px;">${barcodeSection(pkg)}</td></tr>
-        <tr><td style="padding:0 28px 28px;"><table role="presentation" cellspacing="0" cellpadding="0" width="100%">${timelineHtml(pkg)}</table></td></tr>
+        <tr><td style="padding:0 30px 26px;">${barcodeSection(pkg)}</td></tr>
+        <tr><td style="padding:0 30px 28px;"><table role="presentation" cellspacing="0" cellpadding="0" width="100%">${timelineHtml(pkg)}</table></td></tr>
         <tr>
-          <td style="padding:0 28px 28px;">
-            <div style="background:#ECFDF5;border-left:4px solid #35E0A1;border-radius:8px;padding:16px 18px;color:#065F46;font-size:13px;line-height:1.7;">
+          <td style="padding:0 30px 26px;">
+            <div style="background:#F0FDFA;border:1px solid #CCFBF1;border-left:4px solid #00A6A6;border-radius:12px;padding:16px 18px;color:#14514F;font-size:13px;line-height:1.7;">
               Keep this TRX email for your shipment records. Payment, customs, or identity checks may be required before release depending on the destination country.
             </div>
           </td>
         </tr>
         <tr>
-          <td align="center" style="padding:0 28px 34px;">
-            <a href="${trackingUrl}" style="display:inline-block;background:#00A6A6;color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:8px;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;">Track package</a>
+          <td align="center" style="padding:0 30px 36px;">
+            <a href="${trackingUrl}" style="display:inline-block;background:#008F95;color:#ffffff;text-decoration:none;padding:16px 32px;border-radius:10px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;box-shadow:0 8px 20px rgba(0,143,149,.2);">View live tracking</a>
           </td>
         </tr>
         <tr>
-          <td style="background:#0B1020;color:#d1d5db;padding:24px 28px;text-align:center;font-size:12px;line-height:1.7;">
-            ${BRAND.name} | ${BRAND.tagline}<br>
-            Replies go to <a href="mailto:${REPLY_TO_EMAIL}" style="color:#35E0A1;text-decoration:none;font-weight:700;">${REPLY_TO_EMAIL}</a><br>
-            Support: <a href="mailto:${SUPPORT_EMAIL}" style="color:#35E0A1;text-decoration:none;font-weight:700;">${SUPPORT_EMAIL}</a>
+          <td style="background:#0B1020;color:#CBD5E1;padding:26px 28px;text-align:center;font-size:12px;line-height:1.8;">
+            <strong style="color:#ffffff;font-size:13px;">${BRAND.name}</strong><br>
+            <span style="color:#94A3B8;">${BRAND.tagline}</span><br>
+            Replies: <a href="mailto:${REPLY_TO_EMAIL}" style="color:#6EE7B7;text-decoration:none;font-weight:700;">${REPLY_TO_EMAIL}</a>
+            &nbsp;·&nbsp;
+            Support: <a href="mailto:${SUPPORT_EMAIL}" style="color:#6EE7B7;text-decoration:none;font-weight:700;">${SUPPORT_EMAIL}</a>
           </td>
         </tr>
       </table>
