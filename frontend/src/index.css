@@ -9,6 +9,9 @@
 
   body {
     @apply font-sans antialiased;
+    background:
+      radial-gradient(ellipse at 82% 4%, rgba(53, 224, 161, 0.09), transparent 29rem),
+      #ffffff;
   }
 
   html.dark {
@@ -19,11 +22,12 @@
 @layer components {
   /* TRX accent button */
   .btn-dhl {
-    @apply px-6 py-3 bg-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-sm shadow-lg hover:bg-dhl-yellow-light hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
+    @apply px-6 py-3 bg-gradient-to-r from-dhl-red to-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
+    box-shadow: 0 12px 28px rgba(0, 166, 166, 0.22);
   }
 
   .btn-dhl-outline {
-    @apply px-6 py-3 bg-transparent border-2 border-dhl-yellow text-dhl-yellow font-bold uppercase tracking-wider rounded-sm hover:bg-dhl-yellow hover:text-dhl-black transition-all duration-300;
+    @apply px-6 py-3 bg-white/5 border border-white/30 text-white font-bold uppercase tracking-wider rounded-xl hover:bg-white/15 hover:border-dhl-yellow transition-all duration-300;
   }
 
   .btn-dhl-red {
@@ -32,12 +36,33 @@
 
   /* Input field */
   .input-dhl {
-    @apply w-full px-4 py-3 rounded-sm border-2 border-dhl-gray-300 dark:border-dhl-gray-700 bg-white dark:bg-dhl-gray-800 text-dhl-black dark:text-white focus:ring-2 focus:ring-dhl-yellow focus:border-dhl-yellow outline-none transition-all duration-300;
+    @apply w-full px-4 py-3 rounded-xl border border-dhl-gray-300 dark:border-dhl-gray-700 bg-white dark:bg-dhl-gray-800 text-dhl-black dark:text-white focus:ring-4 focus:ring-dhl-yellow/20 focus:border-dhl-red outline-none transition-all duration-300;
+    box-shadow: 0 8px 24px rgba(11, 16, 32, 0.045);
   }
 
   /* Glass card */
   .glass-card {
-    @apply bg-white/90 dark:bg-dhl-gray-900/90 backdrop-blur-lg rounded-sm border border-dhl-gray-200 dark:border-dhl-gray-700 shadow-xl;
+    @apply bg-white/90 dark:bg-dhl-gray-900/90 backdrop-blur-lg rounded-2xl border border-dhl-gray-200 dark:border-dhl-gray-700 shadow-xl;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-card,
+    .tracking-result-card {
+      animation: tracking-card-arrive 520ms cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    .img-overlay img {
+      transition: transform 700ms cubic-bezier(.2,.8,.2,1);
+    }
+
+    .img-overlay:hover img {
+      transform: scale(1.035);
+    }
+  }
+
+  @keyframes tracking-card-arrive {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* Status badges */

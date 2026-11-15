@@ -39,6 +39,20 @@ services:
         value: 10000
       - key: SMTP_SOCKET_TIMEOUT_MS
         value: 15000
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: TRX Logistics
+      - key: EMAIL_FROM
+        sync: false
+      - key: REPLY_TO_EMAIL
+        sync: false
+      - key: INTEGRATION_ENCRYPTION_KEY
+        generateValue: true
+      - key: CREDIXA_PAYMENT_SIGNING_SECRET_TEST
+        sync: false
+      - key: CREDIXA_PAYMENT_SIGNING_SECRET_PRODUCTION
+        sync: false
       - key: EMAIL_LOGO_URL
         sync: false
       - key: SUPPORT_EMAIL

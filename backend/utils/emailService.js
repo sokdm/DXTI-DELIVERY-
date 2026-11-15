@@ -252,10 +252,45 @@ const sendEmail = async (to, subject, html, options = {}) => {
     throw new Error('Invalid recipient email address');
   }
 
+  if (process.env.RESEND_API_KEY) {
+    const attachments = (options.attachments || []).map((attachment) => ({
+      filename: attachment.filename,
+      content: Buffer.isBuffer(attachment.content)
+        ? attachment.content.toString('base64')
+        : attachment.content,
+    }));
+    const payload = {
+      from: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>`,
+      to: [to],
+      subject,
+      html,
+      text: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+      reply_to: REPLY_TO_EMAIL,
+      headers: {
+        'X-Entity-Ref-ID': `trx-${Date.now()}`,
+        'List-Unsubscribe': `<mailto:${SUPPORT_EMAIL}>`,
+      },
+      ...(attachments.length ? { attachments } : {}),
+    };
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`Resend email delivery failed (${response.status}): ${result.message || result.name || 'provider rejected request'}`);
+    }
+    console.log('Email sent through Resend to', to, '| Subject:', subject, '| Message:', result.id);
+    return { success: true, messageId: result.id, provider: 'resend' };
+  }
+
   const transporter = mailTransporter();
   if (!transporter) {
-    console.log('SMTP credentials not configured. Skipping email to:', to);
-    return { skipped: true, reason: 'SMTP credentials missing' };
+    throw new Error('Email delivery is not configured. Set RESEND_API_KEY or complete the SMTP configuration.');
   }
 
   let info;

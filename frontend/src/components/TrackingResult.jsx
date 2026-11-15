@@ -44,6 +44,12 @@ const statusConfig = {
     label: 'STOPPED',
     progress: 0,
   },
+  cancelled: {
+    color: 'bg-slate-600 text-white',
+    icon: AlertTriangle,
+    label: 'CANCELLED',
+    progress: 0,
+  },
 };
 
 const getLocationName = (loc) => {

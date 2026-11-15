@@ -11,6 +11,7 @@ import {
   Truck,
   Sun,
   Moon,
+  PlugZap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -39,6 +40,7 @@ const Layout = () => {
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/packages', icon: Package, label: 'All Packages' },
     { path: '/create', icon: PlusCircle, label: 'Create Package' },
+    { path: '/integrations', icon: PlugZap, label: 'API & Integrations' },
   ];
 
   return (

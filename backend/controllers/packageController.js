@@ -8,6 +8,7 @@ const {
   isValidEmail,
 } = require('../utils/emailService');
 const { generateReceiptHTML, generateReceiptPDF } = require('../utils/receiptService');
+const { createShipmentEvent, eventTypeForStatus } = require('../utils/integrationEvents');
 
 const receiptEmailCooldowns = new Map();
 const RECEIPT_EMAIL_COOLDOWN_MS = 60 * 1000;
@@ -186,7 +187,7 @@ exports.getAllPackages = async (req, res) => {
 exports.getPackageByTrackingCode = async (req, res) => {
   try {
     const { trackingCode } = req.params;
-    const package = await Package.findOne({ trackingCode });
+    const package = await Package.findOne({ trackingCode }).select('+integration');
 
     if (!package) {
       return res.status(404).json({
@@ -196,13 +197,21 @@ exports.getPackageByTrackingCode = async (req, res) => {
     }
 
     if (package.status === 'in_transit' || package.status === 'shipped') {
+      const oldStatus = package.status;
       package.updateMovement();
       await package.save();
+      if (oldStatus !== package.status) {
+        await createShipmentEvent(package, eventTypeForStatus(package.status));
+      }
     }
 
     res.status(200).json({
       success: true,
-      data: package,
+      data: (() => {
+        const publicPackage = package.toObject();
+        delete publicPackage.integration;
+        return publicPackage;
+      })(),
     });
   } catch (error) {
     res.status(500).json({
@@ -218,7 +227,7 @@ exports.updateStatus = async (req, res) => {
     const { id } = req.params;
     const { status, stopReason } = req.body;
 
-    const validStatuses = ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped'];
+    const validStatuses = ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped', 'cancelled'];
 
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
@@ -234,7 +243,7 @@ exports.updateStatus = async (req, res) => {
       });
     }
 
-    const existingPackage = await Package.findById(id);
+    const existingPackage = await Package.findById(id).select('+integration');
     if (!existingPackage) {
       return res.status(404).json({
         success: false,
@@ -290,7 +299,8 @@ exports.updateStatus = async (req, res) => {
       id,
       updateData,
       { new: true }
-    );
+    ).select('+integration');
+    await createShipmentEvent(package, oldStatus !== status ? eventTypeForStatus(status) : 'shipment.updated');
 
     // Send status update email with tracking
     if (oldStatus !== status) {
@@ -322,7 +332,7 @@ exports.updateStatus = async (req, res) => {
 exports.deletePackage = async (req, res) => {
   try {
     const { id } = req.params;
-    const package = await Package.findById(id);
+    const package = await Package.findById(id).select('+integration');
 
     if (!package) {
       return res.status(404).json({
@@ -335,6 +345,15 @@ exports.deletePackage = async (req, res) => {
       await cloudinary.uploader.destroy(package.packageImagePublicId);
     }
 
+    package.status = 'cancelled';
+    package.statusHistory.push({
+      status: 'cancelled',
+      location: package.currentLocation?.locationName || '',
+      description: 'Shipment cancelled by administrator',
+      timestamp: new Date(),
+    });
+    await package.save();
+    await createShipmentEvent(package, 'shipment.cancelled');
     await package.deleteOne();
 
     res.status(200).json({
@@ -450,7 +469,7 @@ exports.downloadReceiptPDF = async (req, res) => {
 exports.stampReceipt = async (req, res) => {
   try {
     const { id } = req.params;
-    const pkg = await Package.findById(id);
+    const pkg = await Package.findById(id).select('+integration');
 
     if (!pkg) {
       return res.status(404).json({
@@ -470,6 +489,7 @@ exports.stampReceipt = async (req, res) => {
     };
 
     await pkg.save();
+    await createShipmentEvent(pkg, 'shipment.updated');
 
     res.json({
       success: true,
@@ -497,7 +517,7 @@ exports.updateLocation = async (req, res) => {
       });
     }
 
-    const existingPackage = await Package.findById(id);
+    const existingPackage = await Package.findById(id).select('+integration');
     if (!existingPackage) {
       if (req.file?.filename) {
         try { await cloudinary.uploader.destroy(req.file.filename); } catch (e) {}
@@ -534,7 +554,8 @@ exports.updateLocation = async (req, res) => {
         },
       },
       { new: true }
-    );
+    ).select('+integration');
+    await createShipmentEvent(package, 'shipment.updated');
 
     if (req.file && existingPackage.currentLocation?.imagePublicId) {
       try { await cloudinary.uploader.destroy(existingPackage.currentLocation.imagePublicId); } catch (e) {}
@@ -564,7 +585,7 @@ exports.updatePackage = async (req, res) => {
     const { id } = req.params;
     const packageImageFile = req.files?.packageImage?.[0];
     const locationImageFile = req.files?.locationImage?.[0];
-    const pkg = await Package.findById(id);
+    const pkg = await Package.findById(id).select('+integration');
 
     if (!pkg) {
       for (const file of [packageImageFile, locationImageFile].filter(Boolean)) {
@@ -628,7 +649,7 @@ exports.updatePackage = async (req, res) => {
     }
 
     if (req.body.status !== undefined && req.body.status !== '') {
-      const validStatuses = ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped'];
+      const validStatuses = ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped', 'cancelled'];
       if (!validStatuses.includes(req.body.status)) {
         return res.status(400).json({ success: false, message: 'Invalid status' });
       }
@@ -638,6 +659,14 @@ exports.updatePackage = async (req, res) => {
         pkg.movementProgress = 0;
         pkg.lastMovementUpdate = new Date();
       }
+    }
+    if (oldStatus !== pkg.status) {
+      pkg.statusHistory.push({
+        status: pkg.status,
+        location: pkg.currentLocation?.locationName || '',
+        description: `Status updated to ${pkg.status.replace(/_/g, ' ')}`,
+        timestamp: new Date(),
+      });
     }
 
     ['currentLocation', 'destinationLocation'].forEach((field) => {
@@ -675,6 +704,12 @@ exports.updatePackage = async (req, res) => {
     }
 
     await pkg.save();
+    if (pkg.integration) {
+      await createShipmentEvent(
+        pkg,
+        oldStatus !== pkg.status ? eventTypeForStatus(pkg.status) : 'shipment.updated'
+      );
+    }
 
     if (oldStatus !== pkg.status) {
       sendStatusUpdateEmail(pkg, oldStatus)

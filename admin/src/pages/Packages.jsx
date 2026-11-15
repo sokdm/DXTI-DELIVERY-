@@ -413,6 +413,7 @@ const Packages = () => {
       case 'shipped': return <Truck className="w-5 h-5 text-teal-500" />;
       case 'in_transit': return <Truck className="w-5 h-5 text-blue-500" />;
       case 'stopped': return <AlertCircle className="w-5 h-5 text-red-500" />;
+      case 'cancelled': return <AlertCircle className="w-5 h-5 text-slate-500" />;
       case 'arrived': return <CheckCircle className="w-5 h-5 text-purple-500" />;
       default: return <Clock className="w-5 h-5 text-yellow-500" />;
     }
@@ -424,6 +425,7 @@ const Packages = () => {
       case 'shipped': return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300';
       case 'in_transit': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
       case 'stopped': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      case 'cancelled': return 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
       case 'arrived': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
       default: return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
     }
@@ -452,6 +454,7 @@ const Packages = () => {
             <option value="arrived">Arrived</option>
             <option value="delivered">Delivered</option>
             <option value="stopped">Stopped</option>
+            <option value="cancelled">Cancelled</option>
           </select>
           <button
             onClick={handleExportCSV}
@@ -694,6 +697,7 @@ const Packages = () => {
                     <option value="arrived">Arrived</option>
                     <option value="delivered">Delivered</option>
                     <option value="stopped">Stopped</option>
+                    <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
                 {newStatus === 'stopped' && (
@@ -935,6 +939,7 @@ const Packages = () => {
                     <option value="arrived">Arrived</option>
                     <option value="delivered">Delivered</option>
                     <option value="stopped">Stopped</option>
+                    <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
                 <div>

@@ -10,6 +10,9 @@ const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const packageRoutes = require('./routes/packages');
+const integrationRoutes = require('./routes/integrations');
+const adminIntegrationRoutes = require('./routes/adminIntegrations');
+const { startWebhookWorker } = require('./utils/webhookDelivery');
 
 connectDB();
 
@@ -45,7 +48,14 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Idempotency-Key',
+    'X-Credixa-Payment-Timestamp',
+    'X-Credixa-Payment-Nonce',
+    'X-Credixa-Payment-Signature',
+  ],
 }));
 
 app.use((req, res, next) => {
@@ -54,7 +64,9 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/admin', authRoutes);
+app.use('/api/admin/integrations', adminIntegrationRoutes);
 app.use('/api/packages', packageRoutes);
+app.use('/api/v1/integrations', integrationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -62,93 +74,6 @@ app.get('/api/health', (req, res) => {
     message: 'TRX Logistics API is running',
     timestamp: new Date().toISOString(),
   });
-});
-
-// DEBUG ENDPOINTS
-app.get('/api/debug/env', (req, res) => {
-  res.json({
-    cloudinary_name_set: !!process.env.CLOUDINARY_CLOUD_NAME,
-    cloudinary_key_set: !!process.env.CLOUDINARY_API_KEY,
-    cloudinary_secret_set: !!process.env.CLOUDINARY_API_SECRET,
-    mongodb_set: !!process.env.MONGODB_URI,
-    jwt_set: !!process.env.JWT_SECRET,
-    frontend_url: process.env.FRONTEND_URL,
-    admin_url: process.env.ADMIN_URL,
-    smtp_host_set: !!process.env.SMTP_HOST,
-    smtp_host: process.env.SMTP_HOST || null,
-    smtp_port_set: !!process.env.SMTP_PORT,
-    smtp_port: process.env.SMTP_PORT || null,
-    smtp_secure: process.env.SMTP_SECURE || null,
-    smtp_user_set: !!process.env.SMTP_USER,
-    smtp_pass_set: !!process.env.SMTP_PASS,
-    smtp_from_email_set: !!process.env.SMTP_FROM_EMAIL,
-    smtp_connection_timeout_ms: process.env.SMTP_CONNECTION_TIMEOUT_MS || '10000',
-    smtp_greeting_timeout_ms: process.env.SMTP_GREETING_TIMEOUT_MS || '10000',
-    smtp_socket_timeout_ms: process.env.SMTP_SOCKET_TIMEOUT_MS || '15000',
-  });
-});
-
-app.post('/api/debug/create-package', async (req, res) => {
-  try {
-    console.log('🔍 DEBUG: Testing package creation without auth/upload/email');
-    const Package = require('./models/Package');
-
-    const testPackage = await Package.create({
-      packageName: 'TEST PACKAGE',
-      packageDescription: 'Debug test',
-      packageWeight: 1.0,
-      packageImage: 'https://via.placeholder.com/150',
-      senderName: 'Test Sender',
-      senderPhone: '1234567890',
-      senderEmail: 'test@test.com',
-      senderAddress: 'Test Address',
-      senderCountry: 'Test Country',
-      senderCity: 'Test City',
-      receiverName: 'Test Receiver',
-      receiverPhone: '0987654321',
-      receiverEmail: 'receiver@test.com',
-      receiverAddress: 'Receiver Address',
-      receiverCountry: 'Receiver Country',
-      receiverCity: 'Receiver City',
-      receiverGender: 'male',
-      deliveryPrice: 10.00,
-      currentLocation: { lat: 0, lng: 0, locationName: 'Test Current' },
-      destinationLocation: { lat: 1, lng: 1, locationName: 'Test Dest' },
-      status: 'pending',
-    });
-
-    res.json({ success: true, trackingCode: testPackage.trackingCode });
-  } catch (err) {
-    console.error('DEBUG ERROR:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// DEBUG: Test email endpoint
-app.post('/api/debug/test-email', async (req, res) => {
-  try {
-    const { sendShipmentCreatedEmail } = require('./utils/emailService');
-    const testPkg = {
-      trackingCode: 'TRX-TEST123',
-      receiverName: 'Test User',
-      receiverEmail: req.body.email || 'wsdmpresh@gmail.com',
-      receiverGender: 'male',
-      senderName: 'Test Sender',
-      senderCountry: 'USA',
-      deliveryPrice: 99.99,
-    };
-    
-    console.log('🔍 DEBUG: Testing Brevo email to', testPkg.receiverEmail);
-    await sendShipmentCreatedEmail(testPkg);
-    res.json({ success: true, message: 'Email API call completed (check logs + inbox)' });
-  } catch (err) {
-    console.error('DEBUG EMAIL ERROR:', err);
-    res.status(500).json({ 
-      success: false, 
-      error: err.message, 
-      details: err.response?.data || 'No response data' 
-    });
-  }
 });
 
 // 404 handler — MUST be last
@@ -167,6 +92,7 @@ const server = app.listen(PORT, () => {
   console.log(`TRX Logistics Server running on port ${PORT}`);
   console.log(`📦 API URL: http://localhost:${PORT}/api`);
   console.log(`🌐 Allowed origins:`, allowedOrigins);
+  startWebhookWorker();
 });
 
 process.on('unhandledRejection', (err) => {

@@ -34,7 +34,10 @@ const errorHandler = (err, req, res, next) => {
 
   res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || 'Server Error',
+    ...(typeof err.apiCode === 'string' ? { code: err.apiCode } : {}),
+    message: err.statusCode && err.statusCode < 500
+      ? err.message
+      : process.env.NODE_ENV === 'production' ? 'An unexpected server error occurred' : err.message || 'Server Error',
   });
 };
 

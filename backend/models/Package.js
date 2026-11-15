@@ -1,12 +1,11 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const generateTrackingCode = () => {
   const prefix = 'TRX';
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+  for (let index = 0; index < 8; index += 1) code += chars.charAt(crypto.randomInt(chars.length));
   return `${prefix}-${code}`;
 };
 
@@ -24,7 +23,7 @@ const packageSchema = new mongoose.Schema({
   packageName: { type: String, required: true },
   packageDescription: { type: String, required: true },
   packageWeight: { type: Number, required: true },
-  packageImage: { type: String, required: true },
+  packageImage: { type: String, default: '' },
   packageImagePublicId: { type: String },
   senderName: { type: String, required: true },
   senderPhone: { type: String, required: true },
@@ -57,7 +56,7 @@ const packageSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped'],
+    enum: ['pending', 'shipped', 'in_transit', 'arrived', 'delivered', 'stopped', 'cancelled'],
     default: 'pending',
   },
   stopReason: { type: String },
@@ -79,6 +78,19 @@ const packageSchema = new mongoose.Schema({
   },
   emailSentAt: { type: Date },
   emailError: { type: String },
+
+  integration: {
+    type: {
+      clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'IntegrationClient', required: true },
+      environment: { type: String, enum: ['test', 'production'], required: true },
+      externalOrderId: { type: String, required: true },
+      idempotencyKey: { type: String, required: true },
+      requestHash: { type: String, required: true },
+      shipmentReference: { type: String },
+      paymentVerificationReference: { type: String, required: true },
+    },
+    select: false,
+  },
 
   receipt: {
     receiptId: { type: String, unique: true },
@@ -112,6 +124,15 @@ packageSchema.pre('save', async function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+packageSchema.index(
+  { 'integration.clientId': 1, 'integration.externalOrderId': 1 },
+  { unique: true, sparse: true }
+);
+packageSchema.index(
+  { 'integration.clientId': 1, 'integration.idempotencyKey': 1 },
+  { unique: true, sparse: true }
+);
 
 // UPDATED: Move every 5 minutes instead of 10
 packageSchema.methods.updateMovement = function() {
