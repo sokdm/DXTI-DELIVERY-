@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const SCOPE_OPTIONS = [
@@ -236,9 +237,9 @@ const Integrations = () => {
               Manage scoped credentials, monitor traffic, and send signed shipment updates to Credixa Shopping.
             </p>
           </div>
-          <a className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:-translate-y-0.5 hover:shadow-lg" href={`${API_URL}/v1/integrations/docs`} target="_blank" rel="noreferrer">
+          <Link className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:-translate-y-0.5 hover:shadow-lg" to="/integrations/docs">
             <BookOpen className="h-4 w-4" /> API documentation
-          </a>
+          </Link>
         </div>
         <div className="relative z-10 mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
           {[

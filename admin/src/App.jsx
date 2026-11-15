@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import CreatePackage from './pages/CreatePackage';
 import Packages from './pages/Packages';
 import Integrations from './pages/Integrations';
+import IntegrationDocs from './pages/IntegrationDocs';
 import Layout from './components/Layout';
 
 const PrivateRoute = ({ children }) => {
@@ -38,6 +39,7 @@ function App() {
         <Route path="packages" element={<Packages />} />
         <Route path="create" element={<CreatePackage />} />
         <Route path="integrations" element={<Integrations />} />
+        <Route path="integrations/docs" element={<IntegrationDocs />} />
       </Route>
     </Routes>
   );
