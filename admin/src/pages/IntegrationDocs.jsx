@@ -36,9 +36,11 @@ const events = [
 const errors = [
   ['400', 'VALIDATION_ERROR', 'A request field or required header is invalid.'],
   ['401', 'UNAUTHENTICATED', 'API key is missing, invalid, or revoked.'],
-  ['401', 'PAYMENT_AUTH_INVALID / PAYMENT_AUTH_EXPIRED', 'Trusted payment authorization is missing or expired.'],
+  ['401', 'PAYMENT_AUTH_INVALID', 'The payment signature is missing/invalid or the nonce is malformed.'],
+  ['401', 'PAYMENT_AUTH_EXPIRED', 'The timestamp is missing, malformed, or outside the five-minute window.'],
   ['403', 'INSUFFICIENT_SCOPE', 'The API key lacks a required permission.'],
   ['409', 'DUPLICATE_ORDER / IDEMPOTENCY_CONFLICT', 'The order already exists or the idempotency key was reused with different data.'],
+  ['409', 'PAYMENT_AUTH_REPLAYED', 'The payment authorization nonce has already been consumed.'],
   ['429', 'RATE_LIMITED', 'Request limit exceeded; retry after the rate-limit window.'],
   ['503', 'PAYMENT_AUTH_NOT_CONFIGURED', 'Trusted payment verification needs server-side configuration.'],
 ];
@@ -52,8 +54,40 @@ const shipmentExample = JSON.stringify({
   paymentVerificationReference: 'pay_01J...',
 }, null, 2);
 
+const shipmentHeadersExample = `POST https://<tracking-api-host>/api/v1/integrations/shipments
+Authorization: Bearer <INTEGRATION_API_KEY>
+Content-Type: application/json
+Idempotency-Key: credixa-order-84219-v1
+X-Credixa-Payment-Timestamp: <Unix timestamp in seconds>
+X-Credixa-Payment-Nonce: <fresh cryptographically secure nonce>
+X-Credixa-Payment-Signature: <64 lowercase hexadecimal characters>`;
+
+const paymentSigningExample = `// Call only after Credixa Banking independently confirms payment.
+const crypto = require('node:crypto');
+const timestamp = Math.floor(Date.now() / 1000).toString();
+const nonce = crypto.randomBytes(24).toString('hex');
+const canonical = \`\${externalOrderId}.\${paymentVerificationReference}.\${timestamp}.\${nonce}\`;
+const secret = integrationEnvironment === 'production'
+  ? process.env.CREDIXA_PAYMENT_SIGNING_SECRET_PRODUCTION
+  : process.env.CREDIXA_PAYMENT_SIGNING_SECRET_TEST;
+if (!secret || secret.length < 32) throw new Error('Payment signing is not configured');
+const signature = crypto.createHmac('sha256', secret).update(canonical).digest('hex');`;
+
 const responseExample = JSON.stringify({
   success: true,
+  data: {
+    trackingNumber: 'TRX-12AB34CD',
+    receiptReference: 'RCP-...',
+    trackingUrl: 'https://tracking.example.com/track/TRX-12AB34CD',
+    externalOrderId: 'order-84219',
+    status: 'pending',
+    createdAt: '2026-11-15T08:30:00.000Z',
+  },
+}, null, 2);
+
+const idempotentResponseExample = JSON.stringify({
+  success: true,
+  idempotentReplay: true,
   data: {
     trackingNumber: 'TRX-12AB34CD',
     receiptReference: 'RCP-...',
@@ -160,9 +194,13 @@ const IntegrationDocs = () => {
             <div className="space-y-4">
               <CodeBlock label="Request body · application/json" copyKey="request" copied={copied} onCopy={copy}>{shipmentExample}</CodeBlock>
               <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/70 dark:bg-amber-500/[.07]">
-                <div className="flex gap-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" /><div><div className="text-xs font-extrabold text-amber-900 dark:text-amber-200">Payment authorization is server-to-server</div><p className="mt-1 text-xs leading-5 text-amber-800/80 dark:text-amber-100/70">Sign <code className="font-mono">externalOrderId.paymentVerificationReference.timestamp.nonce</code> with the environment-specific HMAC-SHA256 secret. Use a fresh nonce and a timestamp within five minutes. Never accept payment claims from the browser.</p></div></div>
+                <div className="flex gap-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" /><div><div className="text-xs font-extrabold text-amber-900 dark:text-amber-200">Payment authorization is server-to-server</div><p className="mt-1 text-xs leading-5 text-amber-800/80 dark:text-amber-100/70">Credixa Commerce must first verify the completed transaction using Credixa Banking's authenticated server-to-server API and verified webhook. Only then sign <code className="font-mono">externalOrderId.paymentVerificationReference.timestamp.nonce</code> with the environment-specific HMAC-SHA256 secret. Never trust a browser payment claim or expose the signature in browser JavaScript.</p></div></div>
               </div>
+              <CodeBlock label="Required POST headers" copyKey="shipment-headers" copied={copied} onCopy={copy}>{shipmentHeadersExample}</CodeBlock>
+              <CodeBlock label="Credixa Commerce signing · server only" copyKey="payment-signing" copied={copied} onCopy={copy}>{paymentSigningExample}</CodeBlock>
+              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">The signature is the 32-byte HMAC-SHA256 digest encoded as 64 lowercase hexadecimal characters over the exact UTF-8 canonical message. The timestamp is Unix seconds and must be within 300 seconds of the Tracking API clock. The nonce must be fresh (16–128 URL-safe characters) and is consumed atomically using a unique database constraint. Use <code className="font-mono">CREDIXA_PAYMENT_SIGNING_SECRET_TEST</code> for test keys and <code className="font-mono">CREDIXA_PAYMENT_SIGNING_SECRET_PRODUCTION</code> for live keys; keep both secrets only in backend secret storage.</p>
               <CodeBlock label="Successful response · 201 Created" copyKey="response" copied={copied} onCopy={copy}>{responseExample}</CodeBlock>
+              <CodeBlock label="Same request and idempotency key · 200 OK" copyKey="idempotent-response" copied={copied} onCopy={copy}>{idempotentResponseExample}</CodeBlock>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800"><div className="text-xs font-extrabold">Idempotency</div><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Repeat the same request and key to safely return the original shipment. A changed payload or reused order returns a conflict.</p></div>
                 <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800"><div className="text-xs font-extrabold">Tracking & receipt</div><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">The response includes the platform tracking number, existing receipt reference, and public tracking URL.</p></div>
