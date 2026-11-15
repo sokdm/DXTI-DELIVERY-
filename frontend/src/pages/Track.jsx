@@ -8,7 +8,7 @@ import Footer from '../components/Footer';
 import TrackingResult from '../components/TrackingResult';
 
 // ✅ HARDCODED: Use deployed backend URL directly
-const API_URL = 'https://dxti-delivery-unhl.onrender.com/api';
+const API_URL = 'https://dxti-delivery-3.onrender.com/api';
 
 const trustItems = [
   { icon: Radio, label: 'Live scan updates' },
