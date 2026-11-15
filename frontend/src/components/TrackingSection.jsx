@@ -1,124 +1,92 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ArrowRight, MapPin, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowRight, ArrowUpRight, CheckCircle2, FileCheck2, MapPin, Search } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const TrackingSection = () => {
   const [trackingCode, setTrackingCode] = useState('');
   const navigate = useNavigate();
 
-  const handleTrack = (e) => {
-    e.preventDefault();
-    if (trackingCode.trim()) {
-      navigate(`/track/${trackingCode.trim()}`);
-    }
+  const handleTrack = (event) => {
+    event.preventDefault();
+    const code = trackingCode.trim();
+    if (code) navigate(`/track/${encodeURIComponent(code)}`);
   };
 
   return (
-    <section id="services" className="relative py-24 bg-dhl-gray-50 dark:bg-dhl-gray-900 overflow-hidden">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'repeating-linear-gradient(45deg, #35E0A1 0, #35E0A1 2px, transparent 2px, transparent 20px, #00A6A6 20px, #00A6A6 22px, transparent 22px, transparent 40px)'
-        }}></div>
-      </div>
+    <section id="tracking" className="relative overflow-hidden bg-dhl-gray-50 py-20 dark:bg-dhl-gray-900 sm:py-28">
+      <div className="absolute -right-36 -top-32 h-96 w-96 rounded-full bg-teal-100/60 blur-3xl dark:bg-teal-900/20" />
+      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_.85fr] lg:px-8">
+        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .45 }}>
+          <div className="eyebrow"><span className="h-1.5 w-1.5 rounded-full bg-dhl-red" /> Shipment lookup</div>
+          <h2 className="mt-4 max-w-xl text-3xl font-bold leading-tight tracking-tight text-dhl-black dark:text-white sm:text-5xl">
+            Your shipment, <span className="text-dhl-red">clearly in view.</span>
+          </h2>
+          <p className="mt-5 max-w-xl text-base leading-7 text-dhl-gray-600 dark:text-dhl-gray-300 sm:text-lg">
+            Enter the tracking number from your shipment confirmation to view its latest recorded status and history.
+          </p>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left - Tracking Form */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-dhl-yellow/20 dark:bg-dhl-yellow/10 border-l-4 border-dhl-yellow mb-6">
-              <span className="text-dhl-yellow font-bold uppercase tracking-wider text-sm">
-                Real-Time Tracking
+          <form onSubmit={handleTrack} className="mt-8 max-w-2xl rounded-2xl border border-dhl-gray-200 bg-white p-2 shadow-xl shadow-slate-900/[.06] dark:border-dhl-gray-700 dark:bg-dhl-gray-800 sm:flex">
+            <label htmlFor="homepage-tracking-code" className="sr-only">Tracking number</label>
+            <div className="flex min-w-0 flex-1 items-center px-3">
+              <Search className="mr-3 h-5 w-5 shrink-0 text-dhl-gray-400" />
+              <input
+                id="homepage-tracking-code"
+                type="text"
+                value={trackingCode}
+                onChange={(event) => setTrackingCode(event.target.value)}
+                placeholder="Enter your tracking number"
+                autoComplete="off"
+                className="min-w-0 flex-1 border-0 bg-transparent py-3 text-sm font-medium text-dhl-black outline-none placeholder:text-dhl-gray-400 focus:ring-0 dark:text-white"
+                required
+              />
+            </div>
+            <button type="submit" className="btn-dhl mt-2 w-full !rounded-xl sm:mt-0 sm:w-auto">
+              Track shipment <ArrowRight className="h-4 w-4" />
+            </button>
+          </form>
+
+          <p className="mt-4 text-sm text-dhl-gray-500 dark:text-dhl-gray-400">
+            Questions? <a href="mailto:support@trxlogistics.com" className="font-semibold text-dhl-red hover:underline">Contact customer support</a>
+          </p>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .45, delay: .08 }} className="relative">
+          <div className="overflow-hidden rounded-[1.75rem] bg-dhl-black p-6 text-white shadow-2xl shadow-slate-900/15 sm:p-8">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[.18em] text-teal-300">Tracking workspace</p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-tight">Every update, in context.</h3>
+                <p className="mt-2 max-w-sm text-sm leading-6 text-slate-300">View the shipment record, its latest status and the events added along the way.</p>
+              </div>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-teal-300">
+                <MapPin className="h-6 w-6" />
               </span>
             </div>
-
-            <h2 className="text-4xl md:text-5xl font-black text-dhl-black dark:text-white uppercase mb-4">
-              Track Your <span className="text-dhl-red">Package</span>
-            </h2>
-
-            <p className="text-lg text-dhl-gray-600 dark:text-dhl-gray-300 mb-8">
-              Enter your tracking code to get real-time updates on your delivery status, 
-              current location, and estimated arrival time.
-            </p>
-
-            <form onSubmit={handleTrack} className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dhl-gray-400" />
-                <input
-                  type="text"
-                  value={trackingCode}
-                  onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
-                  placeholder="Enter tracking code (e.g., TRX-8F3K9L2)"
-                  className="input-dhl pl-12 text-lg uppercase font-bold"
-                />
-              </div>
-
-              <motion.button
-                type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="btn-dhl w-full flex items-center justify-center gap-2"
-              >
-                Track Now
-                <ArrowRight className="w-5 h-5" />
-              </motion.button>
-            </form>
-
-            <p className="mt-4 text-sm text-dhl-gray-500 dark:text-dhl-gray-400">
-              Need help? Contact us at <a href="mailto:support@trxlogistics.com" className="text-dhl-red font-bold hover:underline">support@trxlogistics.com</a> or <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold hover:underline">Telegram @TRXLogistics</a>
-            </p>
-          </motion.div>
-
-          {/* Right - Image & Features */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
-          >
-            <img
-              src="https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80"
-              alt="Package Tracking"
-              className="rounded-sm shadow-2xl w-full"
-            />
-            
-            {/* Floating cards */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity }}
-              className="absolute -top-4 -left-4 bg-white dark:bg-dhl-gray-800 p-4 rounded-sm shadow-xl border-l-4 border-dhl-yellow"
-            >
-              <div className="flex items-center gap-3">
-                <MapPin className="w-6 h-6 text-dhl-red" />
-                <div>
-                  <div className="text-sm font-bold text-dhl-black dark:text-white">Live Location</div>
-                  <div className="text-xs text-dhl-gray-500">GPS Precision</div>
+            <div className="mt-8 space-y-3">
+              {[
+                { icon: CheckCircle2, title: 'Status and event history', description: 'Updates recorded for your shipment' },
+                { icon: MapPin, title: 'Location details', description: 'Coordinates and checkpoint details when available' },
+                { icon: FileCheck2, title: 'Shipment information', description: 'Review the details linked to your tracking number' },
+              ].map(({ icon: Icon, title, description }, index) => (
+                <div key={title} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/[.045] p-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-400/10 text-teal-300">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-white">{title}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">0{index + 1}</span>
                 </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 4, repeat: Infinity }}
-              className="absolute -bottom-4 -right-4 bg-white dark:bg-dhl-gray-800 p-4 rounded-sm shadow-xl border-l-4 border-dhl-red"
-            >
-              <div className="flex items-center gap-3">
-                <Clock className="w-6 h-6 text-dhl-yellow" />
-                <div>
-                  <div className="text-sm font-bold text-dhl-black dark:text-white">ETA Updates</div>
-                  <div className="text-xs text-dhl-gray-500">Every 5 Minutes</div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
+              ))}
+            </div>
+            <Link to="/services" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-300 transition hover:text-teal-200">
+              Explore shipment services <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="absolute -bottom-4 -left-4 -z-10 h-24 w-24 rounded-3xl bg-dhl-yellow/70" />
+        </motion.div>
       </div>
     </section>
   );

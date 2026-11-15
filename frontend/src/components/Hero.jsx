@@ -1,178 +1,85 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Package, Clock, Globe, Shield, MapPin, Radio, Plane, CheckCircle2, Route, Camera, FileCheck2 } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check, PackageCheck, ShieldCheck, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const stats = [
-  { icon: Package, value: '50K+', label: 'Shipments' },
-  { icon: Globe, value: '120+', label: 'Countries' },
-  { icon: Clock, value: '24/7', label: 'Monitoring' },
-  { icon: Shield, value: 'Secure', label: 'Records' },
-];
+const Hero = () => (
+  <section className="relative min-h-[680px] overflow-hidden bg-dhl-black pt-[76px] text-white lg:min-h-[760px]">
+    <div className="absolute inset-0 lg:left-[42%]">
+      <img src="/dhl-airplane.jpg" alt="" className="h-full w-full object-cover object-center opacity-55" />
+      <div className="absolute inset-0 bg-gradient-to-r from-dhl-black via-dhl-black/60 to-dhl-black/10 lg:from-dhl-black lg:via-dhl-black/25 lg:to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-dhl-black/70 via-transparent to-dhl-black/10" />
+    </div>
+    <div className="absolute -left-48 top-32 h-[28rem] w-[28rem] rounded-full border border-white/[.06]" />
+    <div className="absolute -left-32 top-48 h-80 w-80 rounded-full border border-white/[.06]" />
 
-const liveCards = [
-  { icon: Route, label: 'Route quality', value: 'Priority lane' },
-  { icon: Camera, label: 'Location proof', value: 'Photo check' },
-  { icon: FileCheck2, label: 'Docs', value: 'Receipt ready' },
-];
+    <div className="relative mx-auto grid min-h-[604px] max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 lg:min-h-[684px] lg:grid-cols-[1.05fr_.95fr] lg:px-8">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .55 }}>
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-3.5 py-2 text-xs font-semibold tracking-wide text-slate-200 backdrop-blur">
+          <span className="h-1.5 w-1.5 rounded-full bg-teal-300" />
+          TRX Logistics shipment portal
+        </div>
+        <h1 className="mt-7 max-w-[650px] text-4xl font-semibold leading-[1.08] tracking-[-.045em] sm:text-6xl lg:text-[4.25rem]">
+          A clearer view of <span className="text-teal-300">every delivery.</span>
+        </h1>
+        <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
+          Track your shipment, review recorded updates and find the details you need—all in one straightforward place.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link to="/track" className="btn-dhl !rounded-xl !px-5">
+            Track a shipment <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link to="/services" className="btn-dhl-outline !rounded-xl !px-5">
+            Explore services
+          </Link>
+        </div>
+        <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-300">
+          {['Shipment event history', 'Shipment details', 'Support when you need it'].map((item) => (
+            <span key={item} className="inline-flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-300/15 text-teal-300"><Check className="h-3 w-3" /></span>
+              {item}
+            </span>
+          ))}
+        </div>
+      </motion.div>
 
-const checkpoints = [
-  { icon: CheckCircle2, label: 'Booked', tone: 'bg-green-500' },
-  { icon: Radio, label: 'Live scan', tone: 'bg-dhl-yellow' },
-  { icon: Plane, label: 'Air route', tone: 'bg-blue-500' },
-  { icon: MapPin, label: 'Final mile', tone: 'bg-dhl-red' },
-];
-
-const Hero = () => {
-  return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-dhl-gray-900">
-      <div className="absolute inset-0">
-        <img
-          src="/dhl-airplane.jpg"
-          alt="TRX aircraft at a fintech logistics hub"
-          className="w-full h-full object-cover opacity-45"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-dhl-gray-950 via-dhl-gray-900/85 to-dhl-gray-900/35"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-dhl-gray-900 via-transparent to-dhl-gray-900/40"></div>
-      </div>
-
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-28 md:py-36">
-        <div className="grid lg:grid-cols-[1.05fr_.95fr] gap-10 xl:gap-16 items-center">
-          <div>
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-dhl-yellow/20 border-l-4 border-dhl-yellow mb-6">
-                <span className="text-dhl-yellow font-bold uppercase tracking-wider text-sm">
-                  Premium express logistics
+      <motion.div initial={{ opacity: 0, y: 16, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .65, delay: .12 }} className="relative hidden lg:block">
+        <div className="ml-auto max-w-[490px] rounded-[1.75rem] border border-white/15 bg-white/[.08] p-3 shadow-2xl shadow-black/30 backdrop-blur-md">
+          <div className="relative h-[490px] overflow-hidden rounded-[1.25rem]">
+            <img src="/dhl-warehouse.jpg" alt="Shipment being prepared at a logistics facility" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-dhl-black/75 via-transparent to-transparent" />
+            <div className="absolute inset-x-5 bottom-5 rounded-2xl border border-white/15 bg-dhl-black/75 p-5 backdrop-blur-xl">
+              <div className="flex items-center justify-between gap-5">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[.17em] text-teal-300">Shipment portal</p>
+                  <p className="mt-2 text-xl font-semibold">Details when you need them.</p>
+                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-300/15 text-teal-300">
+                  <PackageCheck className="h-6 w-6" />
                 </span>
               </div>
-
-              <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white uppercase leading-[0.95] mb-6 max-w-3xl">
-                Precision delivery with
-                <span className="block text-dhl-yellow">live shipment control</span>
-              </h1>
-
-              <p className="text-lg md:text-xl text-dhl-gray-200 mb-8 max-w-2xl leading-relaxed">
-                A refined delivery experience for high-value shipments, with live map tracking,
-                verified package records, branded customer updates, and clear progress from pickup to final mile.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 mb-10">
-                <Link to="/track">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="btn-dhl flex items-center gap-2"
-                  >
-                    Track Package
-                    <ArrowRight className="w-5 h-5" />
-                  </motion.button>
-                </Link>
-                <a href="#services">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="btn-dhl-outline"
-                  >
-                    Learn More
-                  </motion.button>
-                </a>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-3xl">
-                {stats.map((stat, index) => (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-                    className="border border-white/10 bg-white/10 backdrop-blur-md p-4 text-left"
-                  >
-                    <stat.icon className="w-7 h-7 text-dhl-yellow mb-3" />
-                    <div className="text-2xl font-black text-white">{stat.value}</div>
-                    <div className="text-xs text-dhl-gray-300 uppercase tracking-wider font-bold">{stat.label}</div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative"
-          >
-            <div className="relative bg-white/10 backdrop-blur-md border border-white/15 p-3 shadow-2xl">
-              <div className="grid grid-cols-[1.15fr_.85fr] gap-3">
-                <img
-                  src="/dhl-warehouse.jpg"
-                  alt="Express warehouse package processing"
-                  className="h-[420px] md:h-[520px] w-full object-cover"
-                />
-                <div className="grid gap-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=700&q=80"
-                    alt="Premium delivery fleet"
-                    className="h-full min-h-[180px] object-cover"
-                  />
-                  <div className="bg-dhl-yellow text-dhl-black p-5 flex flex-col justify-between">
-                    <div className="text-xs font-black uppercase tracking-widest text-dhl-red">Control layer</div>
-                    <div>
-                      <div className="text-4xl font-black">Live</div>
-                      <div className="font-black uppercase leading-tight">route intelligence</div>
-                    </div>
-                  </div>
-                  <img
-                    src="https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=700&q=80"
-                    alt="Courier loading packages"
-                    className="h-full min-h-[180px] object-cover"
-                  />
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/10 bg-white/[.06] p-3.5">
+                  <Truck className="h-4 w-4 text-slate-300" />
+                  <p className="mt-3 text-xs font-semibold text-slate-200">Shipment progress</p>
+                  <p className="mt-1 text-[11px] text-slate-400">From recorded updates</p>
                 </div>
-              </div>
-              <div className="absolute left-6 right-6 bottom-6 bg-dhl-gray-950/90 border-l-4 border-dhl-yellow p-5">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div>
-                    <div className="text-dhl-yellow text-xs font-black uppercase tracking-widest">Operations status</div>
-                    <div className="text-white text-2xl font-black uppercase">Shipment in control</div>
-                  </div>
-                  <div className="h-3 w-3 bg-green-400 rounded-full animate-pulse"></div>
+                <div className="rounded-xl border border-white/10 bg-white/[.06] p-3.5">
+                  <ShieldCheck className="h-4 w-4 text-slate-300" />
+                  <p className="mt-3 text-xs font-semibold text-slate-200">Shipment details</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Linked to your record</p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  {liveCards.map((item) => (
-                    <div key={item.label} className="bg-white/10 p-3">
-                      <item.icon className="w-4 h-4 text-dhl-yellow mb-2" />
-                      <div className="text-[10px] text-dhl-gray-400 font-bold uppercase">{item.label}</div>
-                      <div className="text-xs text-white font-black">{item.value}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {checkpoints.map((item) => (
-                    <div key={item.label} className="bg-white/10 p-3 text-center">
-                      <div className={`mx-auto mb-2 h-9 w-9 ${item.tone} flex items-center justify-center`}>
-                        <item.icon className={`w-5 h-5 ${item.tone === 'bg-dhl-yellow' ? 'text-dhl-black' : 'text-white'}`} />
-                      </div>
-                      <div className="text-[10px] text-dhl-gray-200 font-bold uppercase leading-tight">{item.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="absolute -top-4 right-4 bg-dhl-yellow text-dhl-black p-4 shadow-xl">
-                <div className="font-black text-sm uppercase tracking-wider">Live ETA</div>
-                <div className="text-dhl-red font-black text-2xl">On route</div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
-      </div>
-
-      <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-dhl-red via-dhl-yellow to-dhl-red"></div>
-    </section>
-  );
-};
+        <div className="absolute -bottom-6 -left-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-dhl-yellow text-dhl-black shadow-xl">
+          <ArrowDown className="h-6 w-6" />
+        </div>
+      </motion.div>
+    </div>
+    <div className="absolute bottom-0 h-px w-full bg-gradient-to-r from-transparent via-teal-300/60 to-transparent" />
+  </section>
+);
 
 export default Hero;

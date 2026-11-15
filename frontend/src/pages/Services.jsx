@@ -1,87 +1,65 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, BadgeCheck, Banknote, Boxes, Globe2, Plane, RadioTower, Route, ShieldCheck, Truck } from 'lucide-react';
+import { ArrowRight, BellRing, FileText, MapPin, PackageCheck, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
 const services = [
-  { icon: Plane, title: 'TRX Prime Global', text: 'Priority international movement for high-value parcels, documents, and business-critical freight.' },
-  { icon: Banknote, title: 'Fintech Settlement Layer', text: 'Currency-aware shipment records, receipt totals, declared values, and customer-facing billing proof.' },
-  { icon: ShieldCheck, title: 'Verified Receipt Control', text: 'Stamped receipts, QR tracking, signature proof, and dispatch documents attached to customer emails.' },
-  { icon: Route, title: 'Route Intelligence', text: 'Origin, destination, progress, location coordinates, current photos, and timeline updates in one tracking flow.' },
-  { icon: Boxes, title: 'Warehouse Command', text: 'Admin-managed intake, image replacement, stop reasons, customer notices, and operational package edits.' },
-  { icon: RadioTower, title: 'Status Broadcasts', text: 'Professional status emails for created, dispatched, stopped, arrived, and delivered shipment events.' },
+  { icon: Search, title: 'Shipment lookup', text: 'Search with a tracking number to open the corresponding shipment record.' },
+  { icon: PackageCheck, title: 'Status and history', text: 'Review the current status alongside the recorded events available for the shipment.' },
+  { icon: MapPin, title: 'Location details', text: 'See location information and a map view when coordinates have been recorded.' },
+  { icon: FileText, title: 'Shipment and receipt details', text: 'Check the package information and receipt reference included with the record.' },
+  { icon: BellRing, title: 'Shipment notifications', text: 'Customer email updates can be sent when shipment changes are published by the operations team.' },
 ];
 
 const Services = () => (
   <div className="min-h-screen bg-white dark:bg-dhl-gray-900">
     <Navbar />
-    <main className="pt-20">
-      <section className="relative overflow-hidden bg-dhl-gray-950 text-white py-24 px-4">
-        <div className="absolute inset-0">
-          <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1600&q=80" alt="TRX logistics operation" className="w-full h-full object-cover opacity-25" />
-          <div className="absolute inset-0 bg-gradient-to-r from-dhl-gray-950 via-dhl-gray-950/90 to-dhl-gray-950/50"></div>
+    <main className="pt-[76px]">
+      <section className="relative overflow-hidden bg-dhl-black px-4 py-20 text-white sm:px-6 sm:py-28 lg:px-8">
+        <div className="absolute inset-0 opacity-30">
+          <img src="/dhl-warehouse.jpg" alt="" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-dhl-black via-dhl-black/85 to-dhl-black/50" />
         </div>
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative mx-auto max-w-7xl">
           <div className="max-w-3xl">
-            <div className="text-dhl-yellow font-black uppercase tracking-widest text-sm mb-5">TRX service architecture</div>
-            <h1 className="text-5xl md:text-7xl font-black uppercase leading-tight mb-6">Fintech logistics built for proof</h1>
-            <p className="text-xl text-dhl-gray-300 leading-relaxed">
-              TRX combines shipment movement, verified receipts, route intelligence, customer notifications, and admin control into one secure logistics layer.
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-teal-300">Customer services</p>
+            <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">Everything you need to follow a shipment.</h1>
+            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+              Use the TRX Logistics portal to look up shipment details and view the updates recorded for your package.
             </p>
+            <Link to="/track" className="btn-dhl mt-8 !rounded-xl">Track a shipment <ArrowRight className="h-4 w-4" /></Link>
           </div>
         </div>
       </section>
 
-      <section className="py-20 bg-dhl-gray-50 dark:bg-dhl-gray-900 px-4">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service, index) => (
-            <motion.article
-              key={service.title}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-white dark:bg-dhl-gray-800 border border-dhl-gray-200 dark:border-dhl-gray-700 p-7 border-t-4 border-dhl-yellow"
-            >
-              <service.icon className="w-10 h-10 text-dhl-red mb-6" />
-              <h2 className="text-2xl font-black uppercase text-dhl-black dark:text-white mb-3">{service.title}</h2>
-              <p className="text-dhl-gray-600 dark:text-dhl-gray-300 leading-relaxed">{service.text}</p>
-            </motion.article>
-          ))}
-        </div>
-      </section>
-
-      <section className="bg-dhl-black text-white py-20 px-4">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-[.9fr_1.1fr] gap-10 items-center">
-          <div>
-            <div className="text-dhl-yellow font-black uppercase tracking-widest text-sm mb-4">Operational standard</div>
-            <h2 className="text-4xl md:text-5xl font-black uppercase mb-5">Every shipment leaves a record</h2>
-            <p className="text-dhl-gray-300 leading-relaxed text-lg">
-              From booking to dispatch and final delivery, TRX keeps the customer informed with receipt proof, status timelines, QR tracking, and support-ready shipment details.
-            </p>
+      <section className="bg-dhl-gray-50 py-20 dark:bg-dhl-gray-900 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
+            <p className="eyebrow">Tracking portal</p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-dhl-black dark:text-white sm:text-4xl">A single view for shipment information.</h2>
+            <p className="mt-4 leading-7 text-dhl-gray-600 dark:text-dhl-gray-300">Information shown depends on what has been added to the shipment record.</p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {['Stamped receipt PDF', 'Dispatch status email', 'Stop reason notice', 'QR tracking scan'].map((item) => (
-              <div key={item} className="bg-white/10 border border-white/10 p-5 flex items-center gap-3">
-                <BadgeCheck className="w-6 h-6 text-dhl-yellow" />
-                <span className="font-black uppercase tracking-wide">{item}</span>
-              </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {services.map(({ icon: Icon, title, text }, index) => (
+              <motion.article key={title} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .35, delay: (index % 3) * .06 }} className="rounded-2xl border border-dhl-gray-200 bg-white p-6 dark:border-dhl-gray-700 dark:bg-dhl-gray-800">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-dhl-red dark:bg-teal-400/10 dark:text-teal-300"><Icon className="h-5 w-5" /></span>
+                <h3 className="mt-5 font-semibold text-dhl-black dark:text-white">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-dhl-gray-600 dark:text-dhl-gray-300">{text}</p>
+              </motion.article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-16 px-4 bg-dhl-yellow">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      <section className="bg-white py-16 dark:bg-dhl-gray-900">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div>
-            <h2 className="text-3xl font-black uppercase text-dhl-black">Ready to track a shipment?</h2>
-            <p className="text-dhl-black/70 font-semibold mt-1">Use the TRX tracking page for live status, timeline, map, and receipt context.</p>
+            <h2 className="text-2xl font-bold tracking-tight text-dhl-black dark:text-white">Have a tracking number?</h2>
+            <p className="mt-2 text-sm text-dhl-gray-600 dark:text-dhl-gray-300">Open the shipment page to check its latest recorded updates.</p>
           </div>
-          <Link to="/track" className="inline-flex items-center gap-2 bg-dhl-black text-white px-7 py-4 font-black uppercase tracking-wider">
-            Track now <ArrowRight className="w-5 h-5" />
-          </Link>
+          <Link to="/track" className="btn-dhl !rounded-xl">Go to tracking <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </section>
     </main>

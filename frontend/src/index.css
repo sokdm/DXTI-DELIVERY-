@@ -3,130 +3,107 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply transition-colors duration-300;
+  body {
+    @apply font-sans antialiased text-dhl-black dark:text-slate-100;
+    background-color: #fff;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
-  body {
-    @apply font-sans antialiased;
-    background:
-      radial-gradient(ellipse at 82% 4%, rgba(53, 224, 161, 0.09), transparent 29rem),
-      #ffffff;
+  ::selection {
+    background: rgba(8, 127, 140, .18);
+  }
+
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
   }
 
   html.dark {
     color-scheme: dark;
   }
+
+  html.dark body {
+    background-color: #101D32;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
 }
 
 @layer components {
-  /* TRX accent button */
   .btn-dhl {
-    @apply px-6 py-3 bg-gradient-to-r from-dhl-red to-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
-    box-shadow: 0 12px 28px rgba(0, 166, 166, 0.22);
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-dhl-red px-6 py-3.5 text-sm font-bold tracking-wide text-white transition duration-200 hover:-translate-y-0.5 hover:bg-dhl-red-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-dhl-red/20 disabled:cursor-not-allowed disabled:opacity-60;
+    box-shadow: 0 10px 24px rgba(8, 127, 140, .2);
   }
 
   .btn-dhl-outline {
-    @apply px-6 py-3 bg-white/5 border border-white/30 text-white font-bold uppercase tracking-wider rounded-xl hover:bg-white/15 hover:border-dhl-yellow transition-all duration-300;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/[.06] px-6 py-3.5 text-sm font-bold tracking-wide text-white transition duration-200 hover:bg-white/[.12] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20;
   }
 
   .btn-dhl-red {
-    @apply px-6 py-3 bg-dhl-red text-white font-bold uppercase tracking-wider rounded-sm shadow-lg hover:bg-dhl-red-dark hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-dhl-red px-6 py-3.5 text-sm font-bold tracking-wide text-white shadow-lg transition duration-200 hover:-translate-y-0.5 hover:bg-dhl-red-dark;
   }
 
-  /* Input field */
   .input-dhl {
-    @apply w-full px-4 py-3 rounded-xl border border-dhl-gray-300 dark:border-dhl-gray-700 bg-white dark:bg-dhl-gray-800 text-dhl-black dark:text-white focus:ring-4 focus:ring-dhl-yellow/20 focus:border-dhl-red outline-none transition-all duration-300;
-    box-shadow: 0 8px 24px rgba(11, 16, 32, 0.045);
+    @apply w-full rounded-xl border border-dhl-gray-200 bg-white px-4 py-3.5 text-dhl-black outline-none transition duration-200 placeholder:text-dhl-gray-400 focus:border-dhl-red focus:ring-4 focus:ring-dhl-red/10 dark:border-dhl-gray-700 dark:bg-dhl-gray-800 dark:text-white;
+    box-shadow: 0 4px 14px rgba(16, 29, 50, .035);
   }
 
-  /* Glass card */
   .glass-card {
-    @apply bg-white/90 dark:bg-dhl-gray-900/90 backdrop-blur-lg rounded-2xl border border-dhl-gray-200 dark:border-dhl-gray-700 shadow-xl;
+    @apply rounded-2xl border border-dhl-gray-200/80 bg-white/95 shadow-xl shadow-slate-900/[.04] backdrop-blur-lg dark:border-dhl-gray-700 dark:bg-dhl-gray-900/95;
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .glass-card,
-    .tracking-result-card {
-      animation: tracking-card-arrive 520ms cubic-bezier(.2,.8,.2,1) both;
-    }
-
-    .img-overlay img {
-      transition: transform 700ms cubic-bezier(.2,.8,.2,1);
-    }
-
-    .img-overlay:hover img {
-      transform: scale(1.035);
-    }
+  .surface-card {
+    @apply rounded-2xl border border-dhl-gray-200/80 bg-white shadow-sm shadow-slate-900/[.035] dark:border-dhl-gray-700 dark:bg-dhl-gray-800;
   }
 
-  @keyframes tracking-card-arrive {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.18em] text-dhl-red;
   }
 
-  /* Status badges */
   .status-badge {
-    @apply px-4 py-1.5 text-sm font-bold uppercase tracking-wider;
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.12em];
   }
 
   .status-pending {
-    @apply bg-dhl-yellow text-dhl-black;
+    @apply bg-amber-50 text-amber-800 ring-1 ring-amber-200;
   }
 
   .status-in_transit {
-    @apply bg-blue-500 text-white;
+    @apply bg-sky-50 text-sky-800 ring-1 ring-sky-200;
   }
 
   .status-arrived {
-    @apply bg-purple-500 text-white;
+    @apply bg-indigo-50 text-indigo-800 ring-1 ring-indigo-200;
   }
 
   .status-delivered {
-    @apply bg-green-500 text-white;
+    @apply bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200;
   }
 
   .status-stopped {
-    @apply bg-dhl-red text-white;
+    @apply bg-rose-50 text-rose-800 ring-1 ring-rose-200;
   }
 
-  /* Section styling */
-  .section-yellow {
-    @apply bg-dhl-yellow;
-  }
-
-  .section-red {
-    @apply bg-dhl-red;
-  }
-
-  .section-dark {
-    @apply bg-dhl-gray-900;
-  }
-
-  .section-light {
-    @apply bg-dhl-gray-50 dark:bg-dhl-gray-900;
-  }
-
-  /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-dhl-yellow to-dhl-yellow-light bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-dhl-red to-teal-500 bg-clip-text text-transparent;
   }
 
-  /* Image overlay */
   .img-overlay {
     @apply relative overflow-hidden;
   }
 
   .img-overlay::after {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-t from-dhl-black/70 via-transparent to-transparent;
+    @apply absolute inset-0 bg-gradient-to-t from-dhl-black/65 via-transparent to-transparent;
   }
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -141,22 +118,19 @@
   @apply bg-dhl-gray-500 dark:bg-dhl-gray-500;
 }
 
-/* Leaflet map custom styles */
 .leaflet-container {
-  @apply rounded-sm;
+  @apply rounded-2xl;
   font-family: 'Inter', sans-serif;
 }
 
-/* Truck animation */
 .truck-icon {
-  @apply text-3xl;
+  @apply text-2xl;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
 }
 
-/* Pulse animation for live tracking */
 .pulse-ring {
   @apply absolute rounded-full;
-  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  animation: pulse-ring 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
 @keyframes pulse-ring {
@@ -170,18 +144,16 @@
   }
 }
 
-/* TRX stripe pattern */
 .dhl-stripe {
   background: repeating-linear-gradient(
     45deg,
-    #35E0A1,
-    #35E0A1 10px,
-    #00A6A6 10px,
-    #00A6A6 20px
+    #087F8C,
+    #087F8C 10px,
+    #101D32 10px,
+    #101D32 20px
   );
 }
 
-/* Diagonal stripe accent */
 .diagonal-accent {
   position: relative;
 }
@@ -193,5 +165,14 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(135deg, #35E0A1 50%, #00A6A6 50%);
+  background: linear-gradient(135deg, #087F8C 50%, #D6A85C 50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }

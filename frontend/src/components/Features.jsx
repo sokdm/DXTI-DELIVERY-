@@ -1,72 +1,49 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Globe, MapPin, Shield, Clock, Headphones, Plane, Warehouse, Truck, X, ChevronRight, Image } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRight, BellRing, FileText, Image, MapPin, PackageCheck, ShieldCheck, X } from 'lucide-react';
 
 const features = [
   {
-    icon: Zap,
-    title: 'Secure Express',
-    description: 'Priority delivery options with verified records, fast updates, and TRX receipt proof.',
-    color: 'bg-dhl-yellow',
-    textColor: 'text-dhl-black',
-    image: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800&q=80',
+    icon: PackageCheck,
+    title: 'Shipment records',
+    description: 'Find the shipment details connected to your tracking number, including sender, recipient and package information when available.',
   },
   {
-    icon: Plane,
-    title: 'Air Freight',
-    description: 'Global air cargo services with real-time tracking and customs clearance support.',
-    color: 'bg-dhl-red',
-    textColor: 'text-white',
-    image: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80',
+    icon: BellRing,
+    title: 'Recorded updates',
+    description: 'Follow status changes and checkpoint notes added to your shipment’s event history.',
   },
   {
-    icon: Truck,
-    title: 'Road Transport',
-    description: 'Extensive ground network covering all major cities with flexible scheduling.',
-    color: 'bg-dhl-yellow',
-    textColor: 'text-dhl-black',
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80',
+    icon: MapPin,
+    title: 'Location context',
+    description: 'Review recorded location details and map coordinates when they have been provided for a shipment.',
   },
   {
-    icon: Warehouse,
-    title: 'Warehousing',
-    description: 'Secure storage facilities with inventory management and distribution services.',
-    color: 'bg-dhl-red',
-    textColor: 'text-white',
-    image: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80',
+    icon: FileText,
+    title: 'Receipt details',
+    description: 'View receipt information linked to the shipment record, including the reference when one is available.',
   },
   {
-    icon: Globe,
-    title: 'Global Coverage',
-    description: 'Deliver to over 120 countries with our extensive international logistics network.',
-    color: 'bg-dhl-yellow',
-    textColor: 'text-dhl-black',
-    image: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=800&q=80',
+    icon: ShieldCheck,
+    title: 'A focused customer view',
+    description: 'Shipment information is presented in a single place so it is easier to understand the latest recorded progress.',
   },
   {
-    icon: Shield,
-    title: 'Secure Handling',
-    description: 'Full insurance coverage and secure packaging for all your valuable shipments.',
-    color: 'bg-dhl-red',
-    textColor: 'text-white',
-    image: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&q=80',
+    icon: BellRing,
+    title: 'Customer support',
+    description: 'Contact the support team with your tracking number if you need help understanding an update.',
   },
 ];
 
-// Gallery images
 const galleryImages = [
-  { src: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800&q=80', title: 'TRX Sorting Facility' },
-  { src: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80', title: 'Air Freight Operations' },
-  { src: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80', title: 'Ground Fleet' },
-  { src: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80', title: 'Package Handling' },
-  { src: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=800&q=80', title: 'Delivery Operations' },
-  { src: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&q=80', title: 'Global Logistics' },
-  { src: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?w=800&q=80', title: 'Container Shipping' },
-  { src: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=800&q=80', title: 'Warehouse Management' },
-  { src: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80', title: 'Last Mile Delivery' },
-  { src: 'https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=800&q=80', title: 'Cold Chain Logistics' },
-  { src: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=800&q=80', title: 'Customs Clearance' },
-  { src: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80', title: 'Digital Tracking' },
+  { src: 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=1000&q=85', title: 'Sorting and handling' },
+  { src: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1000&q=85', title: 'Air transport' },
+  { src: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1000&q=85', title: 'Logistics facilities' },
+  { src: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=1000&q=85', title: 'Warehouse operations' },
+  { src: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=1000&q=85', title: 'Shipment handling' },
+  { src: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1000&q=85', title: 'Cargo transport' },
+  { src: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?w=1000&q=85', title: 'Freight movement' },
+  { src: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=1000&q=85', title: 'Delivery vehicles' },
 ];
 
 const Features = () => {
@@ -74,145 +51,75 @@ const Features = () => {
   const [selectedImage, setSelectedImage] = useState(null);
 
   return (
-    <section id="about" className="py-24 bg-white dark:bg-dhl-gray-800 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-dhl-yellow/20 dark:bg-dhl-yellow/10 border-l-4 border-dhl-yellow mb-6">
-            <span className="text-dhl-yellow font-bold uppercase tracking-wider text-sm">
-              Our Services
-            </span>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-black text-dhl-black dark:text-white uppercase mb-4">
-            Why Choose <span className="text-dhl-red">TRX</span>?
+    <section id="about" className="bg-white py-20 dark:bg-dhl-gray-900 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .45 }} className="max-w-2xl">
+          <div className="eyebrow"><PackageCheck className="h-4 w-4" /> Your shipment workspace</div>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight text-dhl-black dark:text-white sm:text-5xl">
+            The details that matter, <span className="text-dhl-red">all together.</span>
           </h2>
-          <p className="text-lg text-dhl-gray-600 dark:text-dhl-gray-300 max-w-2xl mx-auto">
-            Experience the future of logistics with our cutting-edge technology, 
-            global network, and unmatched service quality.
+          <p className="mt-5 text-base leading-7 text-dhl-gray-600 dark:text-dhl-gray-300 sm:text-lg">
+            The tracking portal brings together the information recorded for each shipment. What you can see depends on the details available on that shipment.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 30 }}
+        <div className="mt-11 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map(({ icon: Icon, title, description }, index) => (
+            <motion.article
+              key={title}
+              initial={{ opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ y: -8 }}
-              className="group relative overflow-hidden rounded-sm shadow-lg cursor-pointer"
+              transition={{ duration: .38, delay: (index % 3) * .06 }}
+              className="group rounded-2xl border border-dhl-gray-200/80 bg-white p-6 transition duration-200 hover:-translate-y-1 hover:border-dhl-red/25 hover:shadow-xl hover:shadow-slate-900/[.05] dark:border-dhl-gray-700 dark:bg-dhl-gray-800"
             >
-              {/* Image background */}
-              <div className="h-48 overflow-hidden">
-                <img
-                  src={feature.image}
-                  alt={feature.title}
-                  className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800&q=80';
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-dhl-black/80 via-dhl-black/40 to-transparent"></div>
-              </div>
-
-              {/* Content */}
-              <div className="relative p-6 bg-white dark:bg-dhl-gray-900 border-b-4 border-dhl-yellow">
-                <div className={`w-14 h-14 ${feature.color} flex items-center justify-center mb-4 -mt-12 relative z-10 shadow-lg`}>
-                  <feature.icon className={`w-7 h-7 ${feature.textColor}`} />
-                </div>
-
-                <h3 className="text-xl font-black text-dhl-black dark:text-white uppercase mb-2">
-                  {feature.title}
-                </h3>
-
-                <p className="text-dhl-gray-600 dark:text-dhl-gray-300 leading-relaxed text-sm">
-                  {feature.description}
-                </p>
-              </div>
-            </motion.div>
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-dhl-red transition group-hover:bg-dhl-red group-hover:text-white dark:bg-teal-400/10 dark:text-teal-300 dark:group-hover:bg-dhl-red dark:group-hover:text-white">
+                <Icon className="h-5 w-5" />
+              </span>
+              <h3 className="mt-5 text-base font-semibold text-dhl-black dark:text-white">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-dhl-gray-600 dark:text-dhl-gray-300">{description}</p>
+            </motion.article>
           ))}
         </div>
 
-        {/* Gallery Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-12 text-center"
-        >
-          <motion.button
-            onClick={() => setShowGallery(true)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center gap-3 px-8 py-4 bg-dhl-yellow text-dhl-black font-black uppercase tracking-wider rounded-sm shadow-lg hover:bg-dhl-yellow-light transition-all duration-300"
-          >
-            <Image className="w-5 h-5" />
-            View Gallery
-            <ChevronRight className="w-5 h-5" />
-          </motion.button>
-        </motion.div>
+        <div className="mt-8 flex flex-col items-start justify-between gap-5 rounded-2xl bg-dhl-gray-50 p-6 dark:bg-dhl-gray-800 sm:flex-row sm:items-center sm:px-8">
+          <div>
+            <p className="font-semibold text-dhl-black dark:text-white">A look at logistics in motion</p>
+            <p className="mt-1 text-sm text-dhl-gray-500 dark:text-dhl-gray-400">Illustrative photography; images are not shipment-specific.</p>
+          </div>
+          <button type="button" onClick={() => setShowGallery(true)} className="inline-flex items-center gap-2 rounded-xl border border-dhl-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-dhl-black transition hover:border-dhl-red/30 hover:text-dhl-red dark:border-dhl-gray-600 dark:bg-dhl-gray-900 dark:text-white">
+            <Image className="h-4 w-4" /> View gallery <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Gallery Modal */}
       <AnimatePresence>
         {showGallery && (
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Logistics image gallery"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-dhl-black/95 backdrop-blur-xl overflow-y-auto"
-            onClick={() => {
-              setShowGallery(false);
-              setSelectedImage(null);
-            }}
+            className="fixed inset-0 z-[100] overflow-y-auto bg-dhl-black/95 p-4 backdrop-blur-md sm:p-8"
+            onClick={() => { setShowGallery(false); setSelectedImage(null); }}
           >
-            <div className="min-h-screen px-4 py-8">
-              {/* Header */}
-              <div className="max-w-7xl mx-auto flex items-center justify-between mb-8">
-                <h2 className="text-3xl font-black text-white uppercase">
-                  TRX <span className="text-dhl-yellow">Gallery</span>
-                </h2>
-                <button
-                  onClick={() => setShowGallery(false)}
-                  className="p-3 bg-dhl-yellow text-dhl-black rounded-sm hover:bg-dhl-yellow-light transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+            <div className="mx-auto max-w-7xl" onClick={(event) => event.stopPropagation()}>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[.18em] text-teal-300">Illustrative photography</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-white">Logistics gallery</h3>
+                </div>
+                <button type="button" aria-label="Close gallery" onClick={() => { setShowGallery(false); setSelectedImage(null); }} className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"><X className="h-5 w-5" /></button>
               </div>
-
-              {/* Gallery Grid */}
-              <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {galleryImages.map((img, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ scale: 1.05 }}
-                    className="relative aspect-square overflow-hidden rounded-sm cursor-pointer group"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedImage(img);
-                    }}
-                  >
-                    <img
-                      src={img.src}
-                      alt={img.title}
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-dhl-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                      <span className="text-white font-bold text-sm uppercase">{img.title}</span>
-                    </div>
-                  </motion.div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                {galleryImages.map((image, index) => (
+                  <button type="button" key={image.title} onClick={() => setSelectedImage(image)} className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-white/5 text-left">
+                    <img src={image.src} alt={image.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-dhl-black/85 to-transparent px-3 pb-3 pt-10 text-xs font-semibold text-white sm:px-4 sm:text-sm">{image.title}</span>
+                    <span className="sr-only">Image {index + 1}</span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -220,35 +127,12 @@ const Features = () => {
         )}
       </AnimatePresence>
 
-      {/* Lightbox */}
       <AnimatePresence>
         {selectedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[101] bg-dhl-black/98 flex items-center justify-center p-4"
-            onClick={() => setSelectedImage(null)}
-          >
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 p-3 bg-dhl-yellow text-dhl-black rounded-sm hover:bg-dhl-yellow-light transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <motion.img
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              src={selectedImage.src}
-              alt={selectedImage.title}
-              className="max-w-full max-h-[85vh] object-contain rounded-sm"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <div className="absolute bottom-8 left-0 right-0 text-center">
-              <span className="text-white font-bold text-lg uppercase tracking-wider bg-dhl-black/50 px-4 py-2 rounded-sm">
-                {selectedImage.title}
-              </span>
-            </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 p-4" onClick={() => setSelectedImage(null)}>
+            <button type="button" aria-label="Close enlarged image" onClick={() => setSelectedImage(null)} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white"><X className="h-5 w-5" /></button>
+            <img src={selectedImage.src} alt={selectedImage.title} className="max-h-[85vh] max-w-full rounded-xl object-contain" onClick={(event) => event.stopPropagation()} />
+            <p className="absolute bottom-5 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white">{selectedImage.title}</p>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,71 +1,95 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Truck, Sun, Moon, Menu, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Truck, Sun, Moon, Menu, X, ArrowUpRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Navbar = () => {
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const location = useLocation();
 
   const navLinks = [
     { name: 'Home', href: '/' },
-    { name: 'Track Package', href: '/track' },
     { name: 'Services', href: '/services' },
     { name: 'Security', href: '/security' },
     { name: 'Contact', href: '/#contact' },
   ];
 
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-dhl-gray-900/95 backdrop-blur-xl border-b-2 border-dhl-yellow shadow-lg"
+    <motion.header
+      initial={{ y: -24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.35 }}
+      className="fixed inset-x-0 top-0 z-50 border-b border-dhl-gray-200/80 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-dhl-gray-900/90"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-3 group">
-            <motion.div whileHover={{ rotate: 10, scale: 1.05 }} className="p-2 bg-dhl-yellow rounded-sm">
-              <Truck className="w-6 h-6 text-dhl-black" />
-            </motion.div>
-            <div className="flex flex-col">
-              <span className="text-lg font-black text-dhl-black dark:text-white uppercase tracking-tight leading-none">TRX</span>
-              <span className="text-xs font-bold text-dhl-red uppercase tracking-widest leading-none">LOGISTICS</span>
-            </div>
-          </Link>
+      <nav aria-label="Main navigation" className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link to="/" aria-label="TRX Logistics home" className="group flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-dhl-black text-white shadow-lg shadow-slate-900/10 transition-transform group-hover:-rotate-3">
+            <Truck className="h-5 w-5" />
+          </span>
+          <span className="leading-none">
+            <span className="block text-[17px] font-extrabold tracking-tight text-dhl-black dark:text-white">TRX</span>
+            <span className="mt-1 block text-[9px] font-bold uppercase tracking-[.22em] text-dhl-red">Logistics</span>
+          </span>
+        </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link key={link.name} to={link.href} className="px-4 py-2 text-dhl-gray-600 dark:text-dhl-gray-300 hover:text-dhl-black dark:hover:text-dhl-yellow font-semibold uppercase text-sm tracking-wider transition-colors rounded-sm hover:bg-dhl-yellow/10">
+        <div className="hidden items-center gap-1 md:flex">
+          {navLinks.map((link) => {
+            const active = link.href === '/' ? location.pathname === '/' : link.href === '/#contact' ? false : location.pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.name}
+                to={link.href}
+                className={`rounded-lg px-4 py-2.5 text-[13px] font-semibold transition-colors ${active ? 'bg-dhl-gray-100 text-dhl-black dark:bg-white/10 dark:text-white' : 'text-dhl-gray-600 hover:bg-dhl-gray-50 hover:text-dhl-black dark:text-dhl-gray-300 dark:hover:bg-white/5 dark:hover:text-white'}`}
+              >
                 {link.name}
               </Link>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} onClick={toggleTheme} className="p-2 rounded-sm bg-dhl-gray-100 dark:bg-dhl-gray-800 text-dhl-gray-600 dark:text-dhl-gray-300 hover:bg-dhl-yellow hover:text-dhl-black transition-colors">
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </motion.button>
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 rounded-sm bg-dhl-yellow text-dhl-black">
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
+            );
+          })}
         </div>
-      </div>
 
-      <div className="h-1 bg-gradient-to-r from-dhl-red via-dhl-yellow to-dhl-red"></div>
-
-      <motion.div initial={false} animate={{ height: isMenuOpen ? 'auto' : 0, opacity: isMenuOpen ? 1 : 0 }} className="md:hidden overflow-hidden bg-white/95 dark:bg-dhl-gray-900/95 backdrop-blur-xl border-b-2 border-dhl-yellow">
-        <div className="px-4 py-4 space-y-1">
-          {navLinks.map((link) => (
-            <Link key={link.name} to={link.href} onClick={() => setIsMenuOpen(false)} className="block py-3 px-4 text-dhl-gray-600 dark:text-dhl-gray-300 hover:text-dhl-black dark:hover:text-dhl-yellow font-semibold uppercase text-sm tracking-wider hover:bg-dhl-yellow/10 rounded-sm">
-              {link.name}
-            </Link>
-          ))}
+        <div className="hidden items-center gap-2 md:flex">
+          <button
+            type="button"
+            aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
+            onClick={toggleTheme}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-dhl-gray-600 transition hover:bg-dhl-gray-100 hover:text-dhl-black dark:text-dhl-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+          </button>
+          <Link to="/track" className="btn-dhl ml-1 !rounded-lg !px-4 !py-2.5 text-[13px]">
+            Track a shipment <ArrowUpRight className="h-4 w-4" />
+          </Link>
         </div>
-      </motion.div>
-    </motion.nav>
+
+        <div className="flex items-center gap-1 md:hidden">
+          <button type="button" aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`} onClick={toggleTheme} className="flex h-10 w-10 items-center justify-center rounded-xl text-dhl-gray-600 hover:bg-dhl-gray-100 dark:text-dhl-gray-300 dark:hover:bg-white/10">
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+          <button type="button" aria-expanded={isMenuOpen} aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'} onClick={() => setIsMenuOpen((open) => !open)} className="flex h-10 w-10 items-center justify-center rounded-xl bg-dhl-gray-100 text-dhl-black dark:bg-white/10 dark:text-white">
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+      </nav>
+
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-dhl-gray-200 bg-white dark:border-white/10 dark:bg-dhl-gray-900 md:hidden">
+            <div className="space-y-1 px-4 py-4">
+              {navLinks.map((link) => (
+                <Link key={link.name} to={link.href} onClick={() => setIsMenuOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-semibold text-dhl-gray-700 hover:bg-dhl-gray-50 dark:text-dhl-gray-200 dark:hover:bg-white/5">
+                  {link.name}
+                </Link>
+              ))}
+              <Link to="/track" onClick={() => setIsMenuOpen(false)} className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-dhl-red px-4 py-3 text-sm font-bold text-white">
+                Track a shipment <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
   );
 };
 

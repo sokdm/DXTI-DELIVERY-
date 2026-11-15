@@ -1,72 +1,54 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Package, MapPin, Calendar, Clock, Truck, CheckCircle, 
-  AlertTriangle, ChevronDown, ChevronUp, X,
-  Weight, DollarSign, User, Mail, Box, Navigation, Send, BadgeCheck, QrCode, FileCheck2
+import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  AlertCircle, BadgeCheck, Box, CalendarDays, CheckCircle2, ChevronDown, ChevronUp,
+  Clock3, FileText, Image, Mail, MapPin, Package, Phone, ShieldCheck,
+  Truck, UserRound, Weight, X,
 } from 'lucide-react';
 import MapTracker from './MapTracker';
 
-const statusConfig = {
-  pending: {
-    color: 'bg-dhl-yellow text-dhl-black',
-    icon: Box,
-    label: 'PENDING',
-    progress: 10,
-  },
-  shipped: {
-    color: 'bg-dhl-red text-white',
-    icon: Truck,
-    label: 'DISPATCHED',
-    progress: 30,
-  },
-  in_transit: {
-    color: 'bg-blue-500 text-white',
-    icon: Truck,
-    label: 'IN TRANSIT',
-    progress: 50,
-  },
-  arrived: {
-    color: 'bg-purple-500 text-white',
-    icon: MapPin,
-    label: 'ARRIVED',
-    progress: 75,
-  },
-  delivered: {
-    color: 'bg-green-500 text-white',
-    icon: CheckCircle,
-    label: 'DELIVERED',
-    progress: 100,
-  },
-  stopped: {
-    color: 'bg-dhl-red text-white',
-    icon: AlertTriangle,
-    label: 'STOPPED',
-    progress: 0,
-  },
-  cancelled: {
-    color: 'bg-slate-600 text-white',
-    icon: AlertTriangle,
-    label: 'CANCELLED',
-    progress: 0,
-  },
+const statusInfo = {
+  pending: { label: 'Pending', icon: Clock3, tone: 'bg-amber-50 text-amber-800 ring-amber-200' },
+  shipped: { label: 'Dispatched', icon: Truck, tone: 'bg-sky-50 text-sky-800 ring-sky-200' },
+  in_transit: { label: 'In transit', icon: Truck, tone: 'bg-sky-50 text-sky-800 ring-sky-200' },
+  arrived: { label: 'Arrived', icon: MapPin, tone: 'bg-indigo-50 text-indigo-800 ring-indigo-200' },
+  delivered: { label: 'Delivered', icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-800 ring-emerald-200' },
+  stopped: { label: 'Stopped', icon: AlertCircle, tone: 'bg-rose-50 text-rose-800 ring-rose-200' },
+  cancelled: { label: 'Cancelled', icon: AlertCircle, tone: 'bg-slate-100 text-slate-700 ring-slate-200' },
 };
 
-const getLocationName = (loc) => {
-  if (!loc) return null;
-  if (typeof loc === 'string') return loc;
-  if (loc.locationName) return loc.locationName;
-  if (loc.name) return loc.name;
-  if (loc.city) return `${loc.city}${loc.country ? ', ' + loc.country : ''}`;
-  return null;
+const formatDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 };
 
-const formatAddress = (address, city, country) => {
-  const parts = [];
-  if (address && address.trim()) parts.push(address.trim());
-  if (city && city.trim()) parts.push(city.trim());
-  if (country && country.trim()) parts.push(country.trim());
-  return parts.join(', ');
+const locationName = (location, fallback) => {
+  if (!location) return fallback;
+  if (typeof location === 'string') return location;
+  return location.locationName || location.name || location.city || fallback;
+};
+
+const formatAddress = (...parts) => parts.filter((part) => typeof part === 'string' && part.trim()).map((part) => part.trim()).join(', ');
+
+const DetailLine = ({ icon: Icon, label, value, href }) => {
+  if (!value) return null;
+  const content = href
+    ? <a href={href} className="break-words font-medium text-dhl-black transition hover:text-dhl-red dark:text-white dark:hover:text-teal-300">{value}</a>
+    : <span className="break-words font-medium text-dhl-black dark:text-white">{value}</span>;
+
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-dhl-gray-400" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-dhl-gray-500 dark:text-dhl-gray-400">{label}</p>
+        <div className="mt-1 text-sm">{content}</div>
+      </div>
+    </div>
+  );
 };
 
 const TrackingResult = ({ packageData }) => {
@@ -75,394 +57,210 @@ const TrackingResult = ({ packageData }) => {
   const [lightboxImage, setLightboxImage] = useState(null);
 
   const status = packageData.status || 'pending';
-  const config = statusConfig[status] || statusConfig.pending;
+  const config = statusInfo[status] || {
+    label: status.replace(/_/g, ' '),
+    icon: Box,
+    tone: 'bg-slate-100 text-slate-700 ring-slate-200',
+  };
   const StatusIcon = config.icon;
-
-  const sender = {
-    name: packageData.senderName,
-    phone: packageData.senderPhone,
-    email: packageData.senderEmail,
-    address: packageData.senderAddress,
-    city: packageData.senderCity,
-    country: packageData.senderCountry,
-  };
-
-  const receiver = {
-    name: packageData.receiverName,
-    phone: packageData.receiverPhone,
-    email: packageData.receiverEmail,
-    address: packageData.receiverAddress,
-    city: packageData.receiverCity,
-    country: packageData.receiverCountry,
-    gender: packageData.receiverGender,
-  };
-
-  const weight = packageData.packageWeight;
-  const price = packageData.deliveryPrice;
-  const priceText = price !== undefined
-    ? `${packageData.deliveryCurrencySymbol || '$'}${parseFloat(price || 0).toFixed(2)} ${packageData.deliveryCurrency || 'USD'}`
-    : 'N/A';
-  const description = packageData.packageDescription;
-  const packageName = packageData.packageName;
-  const packageImage = packageData.packageImage;
-
-  const currentLocation = packageData.currentLocation;
-  const destination = packageData.destinationLocation;
-
-  const progress = ['arrived', 'delivered'].includes(status)
-    ? 100
-    : (packageData.movementProgress !== undefined ? packageData.movementProgress * 100 : config.progress);
-
-  const originName = getLocationName(currentLocation) || 'Origin';
-  const destName = getLocationName(destination) || 'Destination';
-
-  const senderAddress = formatAddress(sender.address, sender.city, sender.country);
-  const receiverAddress = formatAddress(receiver.address, receiver.city, receiver.country);
-
-  const timeline = packageData.statusHistory || packageData.timeline || [];
+  const senderAddress = formatAddress(packageData.senderAddress, packageData.senderCity, packageData.senderCountry);
+  const receiverAddress = formatAddress(packageData.receiverAddress, packageData.receiverCity, packageData.receiverCountry);
   const receipt = packageData.receipt || {};
-  const receiptStamp = receipt.stamped ? (receipt.stampLabel || 'TRX Verified') : 'Awaiting TRX stamp';
-  const receiptSignature = receipt.signature || 'TRX Logistics Authorized Signature';
+
+  const timeline = useMemo(() => {
+    const events = packageData.statusHistory || packageData.timeline || [];
+    return [...events].sort((a, b) => {
+      const dateA = new Date(a.timestamp || a.date || 0).getTime();
+      const dateB = new Date(b.timestamp || b.date || 0).getTime();
+      return (Number.isNaN(dateB) ? 0 : dateB) - (Number.isNaN(dateA) ? 0 : dateA);
+    });
+  }, [packageData.statusHistory, packageData.timeline]);
+
+  useEffect(() => {
+    if (!lightboxImage) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setLightboxImage(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxImage]);
+
+  const deliveryPrice = packageData.deliveryPrice;
+  const price = deliveryPrice !== undefined && deliveryPrice !== null && deliveryPrice !== ''
+    ? `${packageData.deliveryCurrencySymbol || '$'}${Number.isFinite(Number(deliveryPrice)) ? Number(deliveryPrice).toFixed(2) : deliveryPrice} ${packageData.deliveryCurrency || 'USD'}`
+    : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-6"
-    >
-      {/* Lightbox for package image */}
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} className="space-y-5">
       <AnimatePresence>
         {lightboxImage && (
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shipment photo"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
             onClick={() => setLightboxImage(null)}
           >
-            <button
-              onClick={() => setLightboxImage(null)}
-              className="absolute top-4 right-4 p-3 bg-dhl-yellow text-dhl-black rounded-sm hover:bg-dhl-yellow-light transition-colors z-10"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <motion.img
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              src={lightboxImage}
-              alt="Package"
-              className="max-w-full max-h-[90vh] object-contain rounded-sm"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <button type="button" aria-label="Close photo" onClick={() => setLightboxImage(null)} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20"><X className="h-5 w-5" /></button>
+            <img src={lightboxImage} alt={packageData.packageName || 'Shipment photo'} className="max-h-[88vh] max-w-full rounded-xl object-contain" onClick={(event) => event.stopPropagation()} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Status Header */}
-      <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg border-t-4 border-dhl-yellow overflow-hidden">
-        <div className="p-6 md:p-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className={`px-4 py-1.5 text-sm font-black uppercase tracking-wider ${config.color}`}>
-                  <StatusIcon className="w-4 h-4 inline mr-2" />
-                  {config.label}
-                </span>
-                {packageData.stopReason && (
-                  <span className="px-3 py-1 bg-dhl-red text-white text-xs font-black uppercase">
-                    STOPPED
-                  </span>
-                )}
-              </div>
-              <h2 className="text-3xl font-black text-dhl-black dark:text-white uppercase tracking-tight">
-                {packageData.trackingCode}
-              </h2>
-              <p className="text-dhl-gray-500 dark:text-dhl-gray-400 mt-1 font-semibold">
-                {description || 'Package in transit'}
-              </p>
+      <section className="overflow-hidden rounded-2xl border border-dhl-gray-200 bg-white shadow-sm dark:border-dhl-gray-700 dark:bg-dhl-gray-800">
+        <div className="p-5 sm:p-7">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ring-inset ${config.tone}`}>
+                <StatusIcon className="h-3.5 w-3.5" /> {config.label}
+              </span>
+              <p className="mt-4 text-[11px] font-bold uppercase tracking-[.16em] text-dhl-gray-500 dark:text-dhl-gray-400">Tracking number</p>
+              <h2 className="mt-1 break-all font-mono text-2xl font-bold tracking-tight text-dhl-black dark:text-white sm:text-3xl">{packageData.trackingCode}</h2>
+              {packageData.packageDescription && <p className="mt-2 max-w-2xl text-sm leading-6 text-dhl-gray-600 dark:text-dhl-gray-300">{packageData.packageDescription}</p>}
             </div>
-
-            <div className="text-right">
-              <div className="text-5xl font-black text-dhl-yellow">{Math.round(progress)}%</div>
-              <div className="text-sm text-dhl-gray-500 uppercase tracking-wider font-bold">Complete</div>
-            </div>
-          </div>
-
-          <div className="relative h-4 bg-dhl-gray-200 dark:bg-dhl-gray-700 rounded-full overflow-hidden mb-6">
-            <motion.div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-dhl-yellow to-dhl-red"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-3 mb-6">
-            <div className="bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 border-l-4 border-dhl-yellow">
-              <BadgeCheck className="w-6 h-6 text-dhl-yellow mb-2" />
-              <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Receipt Stamp</div>
-              <div className="font-black text-dhl-black dark:text-white">{receiptStamp}</div>
-            </div>
-            <div className="bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 border-l-4 border-dhl-red">
-              <FileCheck2 className="w-6 h-6 text-dhl-red mb-2" />
-              <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Receipt ID</div>
-              <div className="font-black text-dhl-black dark:text-white break-all">{receipt.receiptId || 'N/A'}</div>
-            </div>
-            <div className="bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 border-l-4 border-dhl-yellow">
-              <QrCode className="w-6 h-6 text-dhl-yellow mb-2" />
-              <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">TRX Signature</div>
-              <div className="font-black text-dhl-black dark:text-white">{receiptSignature}</div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-dhl-yellow flex items-center justify-center rounded-sm">
-                <MapPin className="w-6 h-6 text-dhl-black" />
-              </div>
+            <div className="flex shrink-0 items-center gap-2 rounded-xl bg-dhl-gray-50 px-4 py-3 dark:bg-dhl-gray-900">
+              <CalendarDays className="h-4 w-4 text-dhl-gray-400" />
               <div>
-                <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">From</div>
-                <div className="font-black text-dhl-black dark:text-white text-lg">{originName}</div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-dhl-gray-500 dark:text-dhl-gray-400">Shipment created</p>
+                <p className="mt-0.5 text-xs font-semibold text-dhl-black dark:text-white">{formatDate(packageData.createdAt) || 'Date not available'}</p>
               </div>
             </div>
+          </div>
 
-            <div className="flex-1 mx-4 md:mx-8 relative">
-              <div className="h-1 bg-dhl-gray-300 dark:bg-dhl-gray-600 rounded-full"></div>
-              <motion.div
-                className="absolute top-1/2 -translate-y-1/2"
-                animate={{ left: `${progress}%` }}
-                transition={{ duration: 1.5 }}
-              >
-                <Truck className="w-8 h-8 text-dhl-yellow -translate-x-1/2" />
-              </motion.div>
+          {status === 'stopped' && packageData.stopReason && (
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-200">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div><p className="text-sm font-semibold">Shipment stopped</p><p className="mt-1 text-sm leading-5">{packageData.stopReason}</p></div>
             </div>
+          )}
 
-            <div className="flex items-center gap-3 text-right">
-              <div>
-                <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">To</div>
-                <div className="font-black text-dhl-black dark:text-white text-lg">{destName}</div>
-              </div>
-              <div className="w-12 h-12 bg-dhl-red flex items-center justify-center rounded-sm">
-                <Navigation className="w-6 h-6 text-white" />
-              </div>
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-dhl-gray-200 p-4 dark:border-dhl-gray-700">
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.13em] text-dhl-gray-500 dark:text-dhl-gray-400"><MapPin className="h-4 w-4 text-dhl-red" /> Current recorded location</div>
+              <p className="mt-2 font-semibold text-dhl-black dark:text-white">{locationName(packageData.currentLocation, 'Not available')}</p>
+            </div>
+            <div className="rounded-xl border border-dhl-gray-200 p-4 dark:border-dhl-gray-700">
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.13em] text-dhl-gray-500 dark:text-dhl-gray-400"><MapPin className="h-4 w-4 text-dhl-yellow-dark" /> Destination</div>
+              <p className="mt-2 font-semibold text-dhl-black dark:text-white">{locationName(packageData.destinationLocation, 'Not available')}</p>
             </div>
           </div>
         </div>
-      </div>
-
-      {currentLocation && destination && (
-        <MapTracker 
-          currentLocation={currentLocation}
-          destination={destination}
-          origin={currentLocation}
-          status={status}
-          progress={packageData.movementProgress || 0}
-          stopReason={packageData.stopReason}
-        />
-      )}
-
-      <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden">
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className="w-full p-6 flex items-center justify-between hover:bg-dhl-gray-50 dark:hover:bg-dhl-gray-800 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <Clock className="w-5 h-5 text-dhl-yellow" />
-            <h3 className="text-lg font-black text-dhl-black dark:text-white uppercase tracking-wide">Tracking History</h3>
+        <div className="border-t border-dhl-gray-200 px-5 py-4 dark:border-dhl-gray-700 sm:px-7">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-dhl-gray-500 dark:text-dhl-gray-400">
+            {formatDate(packageData.updatedAt) && <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" /> Record updated {formatDate(packageData.updatedAt)}</span>}
+            {packageData.stopReason && status !== 'stopped' && <span className="inline-flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> {packageData.stopReason}</span>}
           </div>
-          {showHistory ? <ChevronUp className="w-5 h-5 text-dhl-gray-400" /> : <ChevronDown className="w-5 h-5 text-dhl-gray-400" />}
-        </button>
+        </div>
+      </section>
 
-        <AnimatePresence>
+      <MapTracker currentLocation={packageData.currentLocation} destination={packageData.destinationLocation} />
+
+      <section className="overflow-hidden rounded-2xl border border-dhl-gray-200 bg-white dark:border-dhl-gray-700 dark:bg-dhl-gray-800">
+        <button type="button" aria-expanded={showHistory} onClick={() => setShowHistory((visible) => !visible)} className="flex w-full items-center justify-between gap-4 p-5 text-left transition hover:bg-dhl-gray-50 dark:hover:bg-white/[.025] sm:px-6">
+          <span className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-dhl-red dark:bg-teal-400/10 dark:text-teal-300"><Clock3 className="h-5 w-5" /></span><span><span className="block font-semibold text-dhl-black dark:text-white">Tracking history</span><span className="mt-1 block text-xs text-dhl-gray-500 dark:text-dhl-gray-400">{timeline.length} recorded {timeline.length === 1 ? 'update' : 'updates'}</span></span></span>
+          {showHistory ? <ChevronUp className="h-5 w-5 text-dhl-gray-400" /> : <ChevronDown className="h-5 w-5 text-dhl-gray-400" />}
+        </button>
+        <AnimatePresence initial={false}>
           {showHistory && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
-            >
-              <div className="px-6 pb-6">
-                <div className="relative">
-                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-dhl-gray-200 dark:bg-dhl-gray-700"></div>
-                  
-                  {timeline.length > 0 ? timeline.map((event, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="relative flex items-start gap-4 mb-6 last:mb-0"
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
-                        index === 0 ? 'bg-dhl-yellow text-dhl-black' : 'bg-dhl-gray-200 dark:bg-dhl-gray-700 text-dhl-gray-500'
-                      }`}>
-                        <CheckCircle className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 bg-dhl-gray-50 dark:bg-dhl-gray-800 p-4 rounded-sm">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-black text-dhl-black dark:text-white uppercase text-sm tracking-wide">
-                            {event.status?.replace('_', ' ')}
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="border-t border-dhl-gray-200 px-5 py-5 dark:border-dhl-gray-700 sm:px-6">
+                {timeline.length ? (
+                  <ol className="space-y-0">
+                    {timeline.map((event, index) => {
+                      const eventLabel = statusInfo[event.status]?.label || (event.status || 'Update').replace(/_/g, ' ');
+                      const date = formatDate(event.timestamp || event.date);
+                      return (
+                        <li key={`${event.timestamp || event.date || event.status}-${index}`} className="relative flex gap-4 pb-6 last:pb-0">
+                          {index < timeline.length - 1 && <span className="absolute bottom-0 left-[15px] top-8 w-px bg-dhl-gray-200 dark:bg-dhl-gray-700" />}
+                          <span className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${index === 0 ? 'bg-teal-50 text-dhl-red dark:bg-teal-400/10 dark:text-teal-300' : 'bg-dhl-gray-100 text-dhl-gray-500 dark:bg-dhl-gray-700 dark:text-dhl-gray-300'}`}>
+                            {index === 0 ? <CheckCircle2 className="h-4 w-4" /> : <span className="h-2 w-2 rounded-full bg-current" />}
                           </span>
-                          <span className="text-xs text-dhl-gray-500 font-bold">
-                            {new Date(event.timestamp || event.date).toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="text-dhl-gray-600 dark:text-dhl-gray-300 text-sm font-semibold">
-                          {event.location || event.description}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )) : (
-                    <div className="text-center py-8 text-dhl-gray-500 font-bold">
-                      No tracking history available yet.
-                    </div>
-                  )}
-                </div>
+                          <div className="min-w-0 flex-1 rounded-xl bg-dhl-gray-50 p-4 dark:bg-dhl-gray-900">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                              <p className="text-sm font-semibold capitalize text-dhl-black dark:text-white">{eventLabel}</p>
+                              {date && <time className="text-xs text-dhl-gray-500 dark:text-dhl-gray-400">{date}</time>}
+                            </div>
+                            {(event.description || event.location) && <p className="mt-2 text-sm leading-5 text-dhl-gray-600 dark:text-dhl-gray-300">{[event.location, event.description].filter(Boolean).join(' · ')}</p>}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <p className="py-2 text-sm text-dhl-gray-500 dark:text-dhl-gray-400">No tracking history has been recorded yet.</p>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-      <div className="bg-white dark:bg-dhl-gray-900 rounded-sm shadow-lg overflow-hidden border border-dhl-gray-200 dark:border-dhl-gray-700">
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="w-full p-6 flex items-center justify-between hover:bg-dhl-gray-50 dark:hover:bg-dhl-gray-800 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <Package className="w-5 h-5 text-dhl-yellow" />
-            <h3 className="text-lg font-black text-dhl-black dark:text-white uppercase tracking-wide">Package Details</h3>
-          </div>
-          {showDetails ? <ChevronUp className="w-5 h-5 text-dhl-gray-400" /> : <ChevronDown className="w-5 h-5 text-dhl-gray-400" />}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-dhl-gray-200 bg-white dark:border-dhl-gray-700 dark:bg-dhl-gray-800">
+        <button type="button" aria-expanded={showDetails} onClick={() => setShowDetails((visible) => !visible)} className="flex w-full items-center justify-between gap-4 p-5 text-left transition hover:bg-dhl-gray-50 dark:hover:bg-white/[.025] sm:px-6">
+          <span className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-dhl-red dark:bg-teal-400/10 dark:text-teal-300"><Package className="h-5 w-5" /></span><span><span className="block font-semibold text-dhl-black dark:text-white">Shipment details</span><span className="mt-1 block text-xs text-dhl-gray-500 dark:text-dhl-gray-400">Package, contacts and receipt information</span></span></span>
+          {showDetails ? <ChevronUp className="h-5 w-5 text-dhl-gray-400" /> : <ChevronDown className="h-5 w-5 text-dhl-gray-400" />}
         </button>
-
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {showDetails && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
-            >
-              <div className="px-6 pb-6 space-y-4">
-                
-                {/* Package Name + Image - TAP TO VIEW FULL SIZE */}
-                <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm border-l-4 border-dhl-yellow">
-                  <div className="flex items-center gap-5">
-                    {packageImage && (
-                      <motion.div 
-                        className="flex-shrink-0 cursor-pointer group relative"
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setLightboxImage(packageImage)}
-                      >
-                        <img 
-                          src={packageImage} 
-                          alt={packageName || 'Package'} 
-                          className="w-36 h-36 object-cover rounded-sm shadow-lg group-hover:shadow-xl transition-shadow"
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-sm flex items-center justify-center">
-                          <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                          </svg>
-                        </div>
-                      </motion.div>
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="space-y-6 border-t border-dhl-gray-200 p-5 dark:border-dhl-gray-700 sm:p-6">
+                <div className="grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
+                  <div className="flex flex-col gap-4 sm:flex-row lg:flex-col">
+                    {packageData.packageImage && (
+                      <button type="button" onClick={() => setLightboxImage(packageData.packageImage)} className="group relative h-48 w-full overflow-hidden rounded-xl bg-dhl-gray-100 text-left sm:w-56 lg:w-full">
+                        <img src={packageData.packageImage} alt={packageData.packageName || 'Shipment package'} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                        <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-lg bg-dhl-black/70 text-white"><Image className="h-4 w-4" /></span>
+                      </button>
                     )}
-                    <div className="flex-1">
-                      <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold mb-1">Package</div>
-                      <div className="font-black text-dhl-black dark:text-white text-2xl tracking-tight">{packageName || 'Parcel'}</div>
-                      {description && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-semibold mt-1">{description}</div>}
-                      <div className="text-xs text-dhl-gray-400 mt-2 font-medium">Tap image to view full size</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-dhl-yellow/20 dark:bg-dhl-yellow/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="w-6 h-6 text-dhl-yellow" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold mb-1">Sender</div>
-                      <div className="font-black text-dhl-black dark:text-white text-xl tracking-tight">{sender.name || 'N/A'}</div>
-                      {sender.phone && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-bold mt-1">{sender.phone}</div>}
-                      {sender.email && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-semibold">{sender.email}</div>}
-                      {senderAddress && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-semibold mt-2">{senderAddress}</div>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-dhl-red/20 dark:bg-dhl-red/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="w-6 h-6 text-dhl-red" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold mb-1">Recipient</div>
-                      <div className="font-black text-dhl-black dark:text-white text-xl tracking-tight">{receiver.name || 'N/A'}</div>
-                      {receiver.phone && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-bold mt-1">{receiver.phone}</div>}
-                      {receiver.email && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-semibold">{receiver.email}</div>}
-                      {receiverAddress && <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-semibold mt-2">{receiverAddress}</div>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-dhl-yellow/20 dark:bg-dhl-yellow/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Weight className="w-6 h-6 text-dhl-yellow" />
-                      </div>
-                      <div>
-                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Weight</div>
-                        <div className="font-black text-dhl-black dark:text-white text-xl tracking-tight">{weight !== undefined ? weight + ' kg' : 'N/A'}</div>
+                    {packageData.currentLocation?.image && (
+                      <button type="button" onClick={() => setLightboxImage(packageData.currentLocation.image)} className="group relative h-48 w-full overflow-hidden rounded-xl bg-dhl-gray-100 text-left sm:w-56 lg:w-full">
+                        <img src={packageData.currentLocation.image} alt="Recorded shipment location" loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                        <span className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-lg bg-dhl-black/70 text-white"><Image className="h-4 w-4" /></span>
+                      </button>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold uppercase tracking-wide text-dhl-gray-500 dark:text-dhl-gray-400">Package</p>
+                      <h3 className="mt-2 text-lg font-semibold text-dhl-black dark:text-white">{packageData.packageName || 'Shipment package'}</h3>
+                      {packageData.packageDescription && <p className="mt-2 text-sm leading-6 text-dhl-gray-600 dark:text-dhl-gray-300">{packageData.packageDescription}</p>}
+                      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3 text-sm text-dhl-gray-600 dark:text-dhl-gray-300">
+                        {packageData.packageWeight !== undefined && packageData.packageWeight !== null && <span className="inline-flex items-center gap-2"><Weight className="h-4 w-4 text-dhl-gray-400" /> {packageData.packageWeight} kg</span>}
+                        {price && <span className="inline-flex items-center gap-2"><FileText className="h-4 w-4 text-dhl-gray-400" /> {price}</span>}
                       </div>
                     </div>
                   </div>
-                  <div className="p-5 bg-dhl-gray-50 dark:bg-dhl-gray-800 rounded-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-dhl-red/20 dark:bg-dhl-red/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <DollarSign className="w-6 h-6 text-dhl-red" />
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-xl border border-dhl-gray-200 p-4 dark:border-dhl-gray-700">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-dhl-black dark:text-white"><UserRound className="h-4 w-4 text-dhl-red" /> Sender</h3>
+                      <div className="mt-2 divide-y divide-dhl-gray-100 dark:divide-dhl-gray-700">
+                        <DetailLine icon={UserRound} label="Name" value={packageData.senderName} />
+                        <DetailLine icon={MapPin} label="Address" value={senderAddress} />
+                        <DetailLine icon={Phone} label="Phone" value={packageData.senderPhone} href={packageData.senderPhone ? `tel:${packageData.senderPhone}` : undefined} />
+                        <DetailLine icon={Mail} label="Email" value={packageData.senderEmail} href={packageData.senderEmail ? `mailto:${packageData.senderEmail}` : undefined} />
                       </div>
-                      <div>
-                        <div className="text-xs text-dhl-gray-500 uppercase tracking-wider font-bold">Delivery Price</div>
-                        <div className="font-black text-dhl-black dark:text-white text-xl tracking-tight">{priceText}</div>
+                    </div>
+                    <div className="rounded-xl border border-dhl-gray-200 p-4 dark:border-dhl-gray-700">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-dhl-black dark:text-white"><UserRound className="h-4 w-4 text-dhl-red" /> Recipient</h3>
+                      <div className="mt-2 divide-y divide-dhl-gray-100 dark:divide-dhl-gray-700">
+                        <DetailLine icon={UserRound} label="Name" value={packageData.receiverName} />
+                        <DetailLine icon={MapPin} label="Address" value={receiverAddress} />
+                        <DetailLine icon={Phone} label="Phone" value={packageData.receiverPhone} href={packageData.receiverPhone ? `tel:${packageData.receiverPhone}` : undefined} />
+                        <DetailLine icon={Mail} label="Email" value={packageData.receiverEmail} href={packageData.receiverEmail ? `mailto:${packageData.receiverEmail}` : undefined} />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {packageData.estimatedDelivery && (
-                  <div className="p-4 bg-dhl-yellow/10 dark:bg-dhl-yellow/5 border-l-4 border-dhl-yellow rounded-sm">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-dhl-yellow" />
-                      <div>
-                        <div className="text-xs text-dhl-gray-600 dark:text-dhl-gray-400 uppercase tracking-wider font-bold">Estimated Delivery</div>
-                        <div className="font-black text-dhl-black dark:text-white text-lg tracking-tight">
-                          {new Date(packageData.estimatedDelivery).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {packageData.stopReason && (
-                  <div className="p-4 bg-dhl-red/10 dark:bg-dhl-red/5 border-l-4 border-dhl-red rounded-sm">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="w-5 h-5 text-dhl-red" />
-                      <div>
-                        <div className="text-xs text-dhl-red uppercase tracking-wider font-bold">Delivery Stopped</div>
-                        <div className="font-black text-dhl-red">{packageData.stopReason}</div>
-                      </div>
+                {(receipt.receiptId || receipt.stamped || receipt.signature) && (
+                  <div className="rounded-xl border border-dhl-gray-200 bg-dhl-gray-50 p-5 dark:border-dhl-gray-700 dark:bg-dhl-gray-900">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-dhl-black dark:text-white"><FileText className="h-4 w-4 text-dhl-red" /> Receipt information</div>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {receipt.receiptId && <div><p className="text-[11px] font-semibold uppercase tracking-wide text-dhl-gray-500 dark:text-dhl-gray-400">Receipt reference</p><p className="mt-1 break-all font-mono text-sm font-semibold text-dhl-black dark:text-white">{receipt.receiptId}</p></div>}
+                      <div><p className="text-[11px] font-semibold uppercase tracking-wide text-dhl-gray-500 dark:text-dhl-gray-400">Receipt status</p><p className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-dhl-black dark:text-white">{receipt.stamped ? <><BadgeCheck className="h-4 w-4 text-emerald-600" /> {receipt.stampLabel || 'Marked as stamped'}</> : <><ShieldCheck className="h-4 w-4 text-dhl-gray-400" /> Not marked as stamped</>}</p></div>
+                      {receipt.signature && <div><p className="text-[11px] font-semibold uppercase tracking-wide text-dhl-gray-500 dark:text-dhl-gray-400">Receipt signature</p><p className="mt-1 text-sm font-medium text-dhl-black dark:text-white">{receipt.signature}</p></div>}
                     </div>
                   </div>
                 )}
@@ -470,37 +268,7 @@ const TrackingResult = ({ packageData }) => {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-
-      <div className="bg-dhl-gray-100 dark:bg-dhl-gray-900 rounded-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4 border border-dhl-gray-200 dark:border-dhl-gray-700">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-dhl-yellow rounded-sm">
-            <Mail className="w-6 h-6 text-dhl-black" />
-          </div>
-          <div>
-            <div className="text-dhl-black dark:text-white font-black text-lg">Need Help?</div>
-            <div className="text-dhl-gray-500 dark:text-dhl-gray-400 text-sm font-semibold">Contact our support team</div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <a 
-            href="https://t.me/TRXLogistics"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-black uppercase tracking-wider rounded-sm hover:bg-blue-600 transition-colors"
-          >
-            <Send className="w-4 h-4" />
-            Telegram @TRXLogistics
-          </a>
-          <a 
-            href="mailto:support@trxlogistics.com" 
-            className="inline-flex items-center gap-2 px-6 py-3 bg-dhl-yellow text-dhl-black font-black uppercase tracking-wider rounded-sm hover:bg-dhl-yellow-light transition-colors"
-          >
-            <Mail className="w-4 h-4" />
-            support@trxlogistics.com
-          </a>
-        </div>
-      </div>
+      </section>
     </motion.div>
   );
 };

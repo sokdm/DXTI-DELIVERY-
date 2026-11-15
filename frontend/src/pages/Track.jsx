@@ -1,198 +1,162 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ArrowLeft, Loader2, PackageX, Truck, Mail, Send, MapPin, ShieldCheck, Clock3, Radio, BadgeCheck, FileCheck2, QrCode } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, ArrowLeft, ArrowRight, Loader2, Mail, PackageSearch, Search, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import TrackingResult from '../components/TrackingResult';
 
-// ✅ HARDCODED: Use deployed backend URL directly
 const API_URL = 'https://dxti-delivery-3.onrender.com/api';
-
-const trustItems = [
-  { icon: Radio, label: 'Live scan updates' },
-  { icon: MapPin, label: 'Route map visibility' },
-  { icon: Clock3, label: 'Timeline history' },
-  { icon: ShieldCheck, label: 'Secure package records' },
-];
-
-const insightItems = [
-  { icon: BadgeCheck, title: 'Receipt stamp', text: 'See whether the shipment receipt has been verified and stamped by TRX operations.' },
-  { icon: QrCode, title: 'QR-ready proof', text: 'TRX receipts include scan-ready tracking proof for customer service and verification.' },
-  { icon: FileCheck2, title: 'Full shipment record', text: 'Review sender, receiver, amount, package image, route, location, and stop reason when available.' },
-];
 
 const Track = () => {
   const { trackingCode: urlTrackingCode } = useParams();
   const navigate = useNavigate();
   const [trackingCode, setTrackingCode] = useState(urlTrackingCode || '');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
   const [packageData, setPackageData] = useState(null);
-
-  const trackPackage = async (code) => {
-    if (!code.trim()) return;
-    setLoading(true);
-    setError(null);
-    setPackageData(null);
-
-    try {
-      const response = await axios.get(`${API_URL}/packages/track/${code.trim()}`);
-      if (response.data.success) setPackageData(response.data.data);
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setError('Package not found. Please check the tracking code and try again.');
-      } else if (err.response?.status === 0 || !err.response) {
-        setError('Cannot connect to server. Please check your internet connection or try again later.');
-      } else {
-        setError(err.response?.data?.message || 'Failed to track package. Please check the tracking code and try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [lookupCount, setLookupCount] = useState(0);
 
   useEffect(() => {
-    if (urlTrackingCode) trackPackage(urlTrackingCode);
-  }, [urlTrackingCode]);
+    if (!urlTrackingCode?.trim()) {
+      setLoading(false);
+      setError('');
+      setPackageData(null);
+      return undefined;
+    }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (trackingCode.trim()) {
-      navigate(`/track/${trackingCode.trim()}`);
-      trackPackage(trackingCode);
+    const controller = new AbortController();
+    const code = urlTrackingCode.trim().toUpperCase();
+    setTrackingCode(code);
+    setLoading(true);
+    setError('');
+    setPackageData(null);
+
+    axios.get(`${API_URL}/packages/track/${encodeURIComponent(code)}`, { signal: controller.signal })
+      .then((response) => {
+        if (response.data?.success && response.data.data) {
+          setPackageData(response.data.data);
+        } else {
+          setError(response.data?.message || 'We could not find a shipment with that tracking number.');
+        }
+      })
+      .catch((requestError) => {
+        if (axios.isCancel(requestError)) return;
+        if (requestError.response?.status === 404) {
+          setError('We could not find a shipment with that tracking number. Check the code and try again.');
+        } else if (!requestError.response) {
+          setError('We could not connect to the tracking service. Check your connection and try again.');
+        } else {
+          setError(requestError.response.data?.message || 'The shipment could not be loaded. Please try again.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [urlTrackingCode, lookupCount]);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const code = trackingCode.trim().toUpperCase();
+    if (!code) {
+      setError('Enter the tracking number from your shipment confirmation.');
+      return;
+    }
+    const nextPath = `/track/${encodeURIComponent(code)}`;
+    if (urlTrackingCode === code) {
+      setLookupCount((count) => count + 1);
+    } else {
+      navigate(nextPath);
     }
   };
 
   return (
-    <div className="min-h-screen bg-dhl-gray-50 dark:bg-dhl-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-dhl-gray-50 dark:bg-dhl-gray-900">
       <Navbar />
-      <main className="pt-20 pb-12">
-        <section className="relative overflow-hidden bg-dhl-gray-950 px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-          <div className="absolute inset-0">
-            <img src="/dhl-fleet.jpg" alt="TRX logistics fleet" className="h-full w-full object-cover opacity-25" />
-            <div className="absolute inset-0 bg-gradient-to-r from-dhl-gray-950 via-dhl-gray-950/90 to-dhl-gray-950/55"></div>
+      <main className="pb-20 pt-[76px]">
+        <section className="relative overflow-hidden bg-dhl-black px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8">
+          <div className="absolute inset-0 opacity-25">
+            <img src="/dhl-fleet.jpg" alt="" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-dhl-black via-dhl-black/80 to-dhl-black/55" />
           </div>
-          <div className="relative max-w-6xl mx-auto">
-          <motion.button
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            onClick={() => navigate('/')}
-              className="mb-8 flex items-center gap-2 text-dhl-gray-300 hover:text-dhl-yellow font-bold uppercase tracking-wider transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" /> Back to Home
-          </motion.button>
+          <div className="relative mx-auto max-w-7xl">
+            <button type="button" onClick={() => navigate('/')} className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white">
+              <ArrowLeft className="h-4 w-4" /> Back to home
+            </button>
+            <div className="grid items-end gap-8 lg:grid-cols-[1fr_.72fr]">
+              <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .4 }}>
+                <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-teal-300"><PackageSearch className="h-4 w-4" /> TRX shipment tracking</p>
+                <h1 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">Shipment updates, in one place.</h1>
+                <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">Enter your tracking number to view the shipment details and updates recorded for your package.</p>
+              </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-              className="grid lg:grid-cols-[1fr_.75fr] gap-8 items-end"
-          >
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-dhl-yellow/15 border-l-4 border-dhl-yellow mb-6">
-                  <Truck className="w-4 h-4 text-dhl-yellow" />
-                  <span className="text-dhl-yellow font-black uppercase tracking-wider text-sm">Shipment visibility</span>
+              <motion.form initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .4, delay: .07 }} onSubmit={handleSubmit} className="rounded-2xl border border-white/15 bg-white p-2.5 shadow-2xl shadow-black/20 dark:bg-dhl-gray-800">
+                <label htmlFor="tracking-code" className="sr-only">Tracking number</label>
+                <div className="flex items-center px-3">
+                  <Search className="mr-3 h-5 w-5 shrink-0 text-dhl-gray-400" />
+                  <input
+                    id="tracking-code"
+                    type="text"
+                    value={trackingCode}
+                    onChange={(event) => setTrackingCode(event.target.value.toUpperCase())}
+                    placeholder="Enter tracking number"
+                    autoComplete="off"
+                    required
+                    className="min-w-0 flex-1 border-0 bg-transparent py-3.5 text-sm font-semibold text-dhl-black outline-none placeholder:text-dhl-gray-400 focus:ring-0 dark:text-white"
+                  />
                 </div>
-                <h1 className="text-4xl md:text-6xl font-black text-white uppercase leading-tight mb-5">
-                  Track every movement with confidence
-                </h1>
-                <p className="text-lg text-dhl-gray-300 max-w-2xl leading-relaxed">
-                  Enter your tracking number to view status, package details, current location, route map,
-                  delivery progress, and the latest admin updates.
-                </p>
-              </div>
+                <button type="submit" disabled={loading} className="btn-dhl w-full !rounded-xl disabled:cursor-wait disabled:opacity-70">
+                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Checking shipment</> : <>Track shipment <ArrowRight className="h-4 w-4" /></>}
+                </button>
+              </motion.form>
+            </div>
 
-              <div className="bg-white p-5 shadow-2xl border-t-4 border-dhl-yellow">
-                <form onSubmit={handleSubmit}>
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-dhl-gray-400" />
-                      <input
-                        type="text"
-                        value={trackingCode}
-                        onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
-                        placeholder="Enter tracking code"
-                        className="input-dhl pl-12 text-lg uppercase font-black"
-                      />
-                    </div>
-                    <motion.button
-                      type="submit"
-                      disabled={loading}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="btn-dhl w-full flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Track Package <Search className="w-5 h-5" /></>}
-                    </motion.button>
-                  </div>
-                </form>
-                <div className="grid grid-cols-2 gap-3 mt-5">
-                  {trustItems.map((item) => (
-                    <div key={item.label} className="bg-dhl-gray-50 p-3">
-                      <item.icon className="w-5 h-5 text-dhl-red mb-2" />
-                      <div className="text-xs font-black uppercase text-dhl-gray-700 leading-tight">{item.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            <div className="mt-6 flex flex-wrap items-center gap-4 text-sm text-dhl-gray-300">
-              <span>Need help?</span>
-              <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-500 font-bold hover:underline">
-                <Send className="w-4 h-4" /> Telegram @TRXLogistics
-              </a>
-              <span>or</span>
-              <a href="mailto:support@trxlogistics.com" className="inline-flex items-center gap-1 text-dhl-red font-bold hover:underline">
-                <Mail className="w-4 h-4" /> support@trxlogistics.com
-              </a>
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-slate-300">
+              <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-teal-300" /> Use the number from your confirmation</span>
+              <a href="mailto:support@trxlogistics.com" className="inline-flex items-center gap-2 transition hover:text-white"><Mail className="h-4 w-4 text-teal-300" /> Contact support</a>
             </div>
           </div>
         </section>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="grid md:grid-cols-3 gap-4 mb-8">
-            {insightItems.map((item) => (
-              <div key={item.title} className="bg-white dark:bg-dhl-gray-900 border border-dhl-gray-200 dark:border-dhl-gray-700 p-5 border-t-4 border-dhl-yellow">
-                <item.icon className="w-7 h-7 text-dhl-red mb-3" />
-                <h2 className="text-lg font-black uppercase text-dhl-black dark:text-white">{item.title}</h2>
-                <p className="text-sm text-dhl-gray-600 dark:text-dhl-gray-300 mt-2 leading-relaxed">{item.text}</p>
-              </div>
-            ))}
-          </div>
-
+        <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
           <AnimatePresence mode="wait">
             {loading && (
-              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="bg-white dark:bg-dhl-gray-900 shadow-lg border-t-4 border-dhl-yellow flex flex-col items-center justify-center py-20">
-                <div className="relative mb-5">
-                  <Loader2 className="w-14 h-14 text-dhl-yellow animate-spin" />
-                  <Truck className="w-6 h-6 text-dhl-red absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-                <p className="text-dhl-gray-700 dark:text-dhl-gray-300 font-black uppercase tracking-wider">Checking shipment network...</p>
-                <p className="text-sm text-dhl-gray-500 mt-2">Fetching map, timeline, status, and package details.</p>
+              <motion.div key="loading" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} role="status" className="rounded-2xl border border-dhl-gray-200 bg-white px-6 py-16 text-center dark:border-dhl-gray-700 dark:bg-dhl-gray-800">
+                <Loader2 className="mx-auto h-9 w-9 animate-spin text-dhl-red" />
+                <p className="mt-4 font-semibold text-dhl-black dark:text-white">Looking up your shipment</p>
+                <p className="mt-1 text-sm text-dhl-gray-500 dark:text-dhl-gray-400">This may take a moment.</p>
               </motion.div>
             )}
 
-            {error && (
-              <motion.div key="error" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-dhl-gray-900 p-12 text-center rounded-sm shadow-lg border-t-4 border-dhl-red">
-                <div className="w-20 h-20 mx-auto mb-6 bg-dhl-red/10 flex items-center justify-center">
-                  <PackageX className="w-10 h-10 text-dhl-red" />
-                </div>
-                <h3 className="text-xl font-black text-dhl-black dark:text-white uppercase mb-2">Package Not Found</h3>
-                <p className="text-dhl-gray-600 dark:text-dhl-gray-300 max-w-md mx-auto mb-6">{error}</p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold uppercase tracking-wider rounded-sm hover:bg-blue-600 transition-colors">
-                    <Send className="w-4 h-4" /> Telegram Support
-                  </a>
-                  <a href="mailto:support@trxlogistics.com" className="inline-flex items-center gap-2 px-6 py-3 bg-dhl-yellow text-dhl-black font-bold uppercase tracking-wider rounded-sm hover:bg-dhl-yellow-light transition-colors">
-                    <Mail className="w-4 h-4" /> Email Support
-                  </a>
+            {!loading && error && (
+              <motion.div key="error" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} role="alert" className="rounded-2xl border border-rose-200 bg-white p-6 dark:border-rose-900/50 dark:bg-dhl-gray-800 sm:p-8">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300"><AlertCircle className="h-5 w-5" /></span>
+                <h2 className="mt-5 text-lg font-semibold text-dhl-black dark:text-white">{urlTrackingCode ? 'Shipment lookup unsuccessful' : 'Enter a tracking number'}</h2>
+                <p className="mt-2 text-sm leading-6 text-dhl-gray-600 dark:text-dhl-gray-300">{error}</p>
+                <div className="mt-5 flex flex-wrap gap-4 text-sm">
+                  <a href="mailto:support@trxlogistics.com" className="font-semibold text-dhl-red hover:underline">Email support</a>
+                  <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="font-semibold text-dhl-red hover:underline">Telegram support</a>
                 </div>
               </motion.div>
             )}
 
-            {packageData && !loading && <TrackingResult key="result" packageData={packageData} />}
+            {!loading && !error && !packageData && (
+              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-2xl border border-dhl-gray-200 bg-white p-6 dark:border-dhl-gray-700 dark:bg-dhl-gray-800 sm:p-8">
+                <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-dhl-red dark:bg-teal-400/10 dark:text-teal-300"><PackageSearch className="h-6 w-6" /></span>
+                  <div className="flex-1">
+                    <h2 className="font-semibold text-dhl-black dark:text-white">Ready when you are</h2>
+                    <p className="mt-1 text-sm leading-6 text-dhl-gray-500 dark:text-dhl-gray-400">Enter a tracking number above to open its shipment record and available status history.</p>
+                  </div>
+                  <a href="mailto:support@trxlogistics.com" className="inline-flex items-center gap-2 text-sm font-semibold text-dhl-red hover:underline">Need help? <ArrowRight className="h-4 w-4" /></a>
+                </div>
+              </motion.div>
+            )}
+
+            {!loading && packageData && <TrackingResult key={`result-${packageData.trackingCode}`} packageData={packageData} />}
           </AnimatePresence>
         </div>
       </main>

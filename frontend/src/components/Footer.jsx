@@ -1,182 +1,45 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Truck, Send, Mail, ArrowUp, MapPin, Phone, ExternalLink } from 'lucide-react';
+import { ArrowUp, Mail, Send, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const Footer = () => {
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const quickLinks = [
-    { name: 'Home', href: '/' },
-    { name: 'Track Package', href: '/track' },
-    { name: 'Services', href: '/services' },
-    { name: 'Security', href: '/security' },
-    { name: 'Contact', href: '/#contact' },
-  ];
-
-  const services = [
-    'TRX Prime Global',
-    'Secure Express',
-    'Freight Ledger',
-    'Warehouse Control',
-    'Last Mile Settlement',
-  ];
-
-  return (
-    <footer className="relative bg-dhl-black dark:bg-dhl-gray-950 text-white overflow-hidden">
-      {/* Yellow top border */}
-      <div className="h-2 bg-gradient-to-r from-dhl-red via-dhl-yellow to-dhl-red"></div>
-
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <img
-          src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&q=80"
-          alt="Background"
-          className="w-full h-full object-cover opacity-10"
-        />
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Brand Column */}
-          <div>
-            <Link to="/" className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-dhl-yellow rounded-sm">
-                <Truck className="w-6 h-6 text-dhl-black" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-black text-white uppercase tracking-tight leading-none">TRX</span>
-                <span className="text-xs font-bold text-dhl-yellow uppercase tracking-widest leading-none">LOGISTICS</span>
-              </div>
-            </Link>
-
-            <p className="text-dhl-gray-400 text-sm leading-relaxed mb-6">
-              Fintech logistics for secure global movement, verified receipts, and real-time shipment intelligence.
-            </p>
-
-            {/* Contact Buttons */}
-            <div className="space-y-3">
-              <a
-                href="https://t.me/TRXLogistics"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-sm transition-colors font-bold text-sm uppercase tracking-wider"
-              >
-                <Send className="w-4 h-4" />
-                Telegram @TRXLogistics
-                <ExternalLink className="w-3 h-3 ml-auto" />
-              </a>
-              <a
-                href="mailto:support@trxlogistics.com"
-                className="flex items-center gap-3 px-4 py-3 bg-dhl-yellow hover:bg-dhl-yellow-light text-dhl-black rounded-sm transition-colors font-bold text-sm uppercase tracking-wider"
-              >
-                <Mail className="w-4 h-4" />
-                support@trxlogistics.com
-              </a>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-lg font-black uppercase mb-6 text-dhl-yellow">Quick Links</h3>
-            <ul className="space-y-3">
-              {quickLinks.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    to={link.href}
-                    className="text-dhl-gray-400 hover:text-dhl-yellow text-sm uppercase tracking-wider transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Services */}
-          <div>
-            <h3 className="text-lg font-black uppercase mb-6 text-dhl-yellow">Services</h3>
-            <ul className="space-y-3">
-              {services.map((service) => (
-                <li key={service}>
-                  <span className="text-dhl-gray-400 text-sm uppercase tracking-wider">
-                    {service}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <h3 className="text-lg font-black uppercase mb-6 text-dhl-yellow">Contact</h3>
-            <ul className="space-y-4">
-              <li>
-                <a 
-                  href="mailto:support@trxlogistics.com" 
-                  className="flex items-start gap-3 group"
-                >
-                  <Mail className="w-5 h-5 text-dhl-yellow flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-sm text-dhl-gray-400">Email</div>
-                    <span className="text-white group-hover:text-dhl-yellow transition-colors text-sm font-semibold">
-                      support@trxlogistics.com
-                    </span>
-                  </div>
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="https://t.me/TRXLogistics"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start gap-3 group"
-                >
-                  <Send className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-sm text-dhl-gray-400">Telegram</div>
-                    <span className="text-white group-hover:text-blue-400 transition-colors text-sm font-semibold">
-                      @TRXLogistics
-                    </span>
-                  </div>
-                </a>
-              </li>
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-dhl-yellow flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-sm text-dhl-gray-400">Global Network</div>
-                  <span className="text-white text-sm font-semibold">120+ Countries</span>
-                </div>
-              </li>
-            </ul>
-          </div>
+const Footer = () => (
+  <footer className="bg-dhl-black text-white">
+    <div className="h-px bg-gradient-to-r from-transparent via-teal-300/60 to-transparent" />
+    <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_.8fr_.8fr]">
+        <div>
+          <Link to="/" className="inline-flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-teal-300"><Truck className="h-5 w-5" /></span>
+            <span><span className="block font-bold">TRX Logistics</span><span className="mt-1 block text-[10px] font-semibold uppercase tracking-[.18em] text-slate-400">Shipment portal</span></span>
+          </Link>
+          <p className="mt-5 max-w-sm text-sm leading-6 text-slate-400">
+            Use your tracking number to review shipment details and updates recorded by the TRX Logistics team.
+          </p>
         </div>
-
-        {/* Bottom Bar */}
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="text-dhl-gray-500 text-sm">
-            © 2024 TRX Logistics. All rights reserved.
-          </div>
-
-          <div className="flex items-center gap-6 text-sm text-dhl-gray-500">
-            <a href="#" className="hover:text-dhl-yellow transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-dhl-yellow transition-colors">Terms of Service</a>
-          </div>
-
-          <motion.button
-            onClick={scrollToTop}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            className="p-3 bg-dhl-yellow text-dhl-black rounded-sm hover:bg-dhl-yellow-light transition-colors"
-          >
-            <ArrowUp className="w-5 h-5" />
-          </motion.button>
+        <div>
+          <h2 className="text-sm font-semibold text-white">Explore</h2>
+          <ul className="mt-4 space-y-3 text-sm text-slate-400">
+            <li><Link className="transition hover:text-teal-300" to="/">Home</Link></li>
+            <li><Link className="transition hover:text-teal-300" to="/services">Services</Link></li>
+            <li><Link className="transition hover:text-teal-300" to="/security">Security</Link></li>
+            <li><Link className="transition hover:text-teal-300" to="/track">Track a shipment</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-white">Get in touch</h2>
+          <p className="mt-4 text-sm leading-6 text-slate-400">Have a question? Please share your tracking number with customer support.</p>
+          <a href="mailto:support@trxlogistics.com" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-teal-300 transition hover:text-teal-200"><Mail className="h-4 w-4" /> support@trxlogistics.com</a>
+          <a href="https://t.me/TRXLogistics" target="_blank" rel="noopener noreferrer" className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-300 transition hover:text-teal-300"><Send className="h-4 w-4" /> @TRXLogistics</a>
         </div>
       </div>
-    </footer>
-  );
-};
+      <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <p>© {new Date().getFullYear()} TRX Logistics. All rights reserved.</p>
+        <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="inline-flex items-center gap-2 self-start rounded-lg px-3 py-2 font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:self-auto">
+          Back to top <ArrowUp className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  </footer>
+);
 
 export default Footer;
