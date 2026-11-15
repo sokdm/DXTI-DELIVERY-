@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowDownRight, ArrowUpRight, BookOpen, Check, ChevronRight, CircleAlert,
+  AlertCircle, ArrowDownRight, ArrowUpRight, BookOpen, Check, ChevronRight,
   Clock3, Copy, FileJson2, KeyRound, LockKeyhole, Package, Radio, ShieldCheck,
   Webhook,
 } from 'lucide-react';
@@ -160,7 +160,7 @@ const IntegrationDocs = () => {
             <div className="space-y-4">
               <CodeBlock label="Request body · application/json" copyKey="request" copied={copied} onCopy={copy}>{shipmentExample}</CodeBlock>
               <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/70 dark:bg-amber-500/[.07]">
-                <div className="flex gap-3"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" /><div><div className="text-xs font-extrabold text-amber-900 dark:text-amber-200">Payment authorization is server-to-server</div><p className="mt-1 text-xs leading-5 text-amber-800/80 dark:text-amber-100/70">Sign <code className="font-mono">externalOrderId.paymentVerificationReference.timestamp.nonce</code> with the environment-specific HMAC-SHA256 secret. Use a fresh nonce and a timestamp within five minutes. Never accept payment claims from the browser.</p></div></div>
+                <div className="flex gap-3"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" /><div><div className="text-xs font-extrabold text-amber-900 dark:text-amber-200">Payment authorization is server-to-server</div><p className="mt-1 text-xs leading-5 text-amber-800/80 dark:text-amber-100/70">Sign <code className="font-mono">externalOrderId.paymentVerificationReference.timestamp.nonce</code> with the environment-specific HMAC-SHA256 secret. Use a fresh nonce and a timestamp within five minutes. Never accept payment claims from the browser.</p></div></div>
               </div>
               <CodeBlock label="Successful response · 201 Created" copyKey="response" copied={copied} onCopy={copy}>{responseExample}</CodeBlock>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -199,7 +199,7 @@ const IntegrationDocs = () => {
           </section>
 
           <section className="docs-section" id="errors">
-            <SectionHeading eyebrow="06 · Operations" title="Errors & go-live checklist" icon={CircleAlert}>Error responses contain a stable code and a safe message. Fix the issue before retrying instead of repeating the same invalid request.</SectionHeading>
+            <SectionHeading eyebrow="06 · Operations" title="Errors & go-live checklist" icon={AlertCircle}>Error responses contain a stable code and a safe message. Fix the issue before retrying instead of repeating the same invalid request.</SectionHeading>
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
               <div className="grid grid-cols-[52px_minmax(150px,.8fr)_minmax(0,1.3fr)] gap-3 bg-slate-50 px-4 py-3 text-[9px] font-extrabold uppercase tracking-wider text-slate-400 dark:bg-slate-800/70"><span>HTTP</span><span>Code</span><span>Meaning</span></div>
               {errors.map(([status, code, detail]) => <div key={`${status}-${code}`} className="grid grid-cols-[52px_minmax(150px,.8fr)_minmax(0,1.3fr)] gap-3 border-t border-slate-100 px-4 py-3 dark:border-slate-800"><span className="font-mono text-[10px] font-bold text-slate-500">{status}</span><code className="break-words text-[10px] font-bold text-teal-700 dark:text-emerald-300">{code}</code><span className="text-[10px] leading-5 text-slate-500 dark:text-slate-400">{detail}</span></div>)}

@@ -6,8 +6,8 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   FileText,
+  HelpCircle,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -183,7 +183,7 @@ const Layout = () => {
               <div className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-500/10 dark:text-emerald-300 lg:flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> All systems normal
               </div>
-              <Link to="/integrations/docs" title="API documentation" className="hidden rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:border-teal-300 hover:text-admin-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:inline-flex"><CircleHelp className="h-[18px] w-[18px]" /></Link>
+              <Link to="/integrations/docs" title="API documentation" className="hidden rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:border-teal-300 hover:text-admin-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:inline-flex"><HelpCircle className="h-[18px] w-[18px]" /></Link>
               <button onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-teal-300 hover:text-admin-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
                 {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-admin-primary" />}
                 <span className="hidden sm:inline">{theme === 'dark' ? 'Light' : 'Dark'} mode</span>
